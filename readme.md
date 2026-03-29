@@ -52,7 +52,6 @@
 3. 进入该数据库的 **Console (控制台)**，执行以下 SQL 语句来初始化表结构：
 
 ```sql
--- 创建服务器节点表
 CREATE TABLE IF NOT EXISTS servers (
   id TEXT PRIMARY KEY,
   name TEXT,
