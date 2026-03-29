@@ -12,6 +12,11 @@ export default {
       return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     };
 
+    const getFlagEmoji = (countryCode) => {
+      if (!countryCode || countryCode === 'XX') return '🏳️';
+      return String.fromCodePoint(...countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt()));
+    };
+
     // ==========================================
     // 0. 认证机制与全局设置加载
     // ==========================================
@@ -30,10 +35,12 @@ export default {
       headers: { 'WWW-Authenticate': `Basic realm="${realmTitle}"` }
     });
 
-    // 默认全局设置
+    // 默认全局设置 (新增了 custom_bg)
     let sys = {
       site_title: '⚡ Server Monitor Pro',
       admin_title: '⚙️ 探针管理后台',
+      theme: 'theme1', 
+      custom_bg: '', // 自定义背景图 Base64 或 URL
       is_public: 'true',
       show_price: 'true',
       show_expire: 'true',
@@ -48,12 +55,82 @@ export default {
       }
     } catch (e) {}
 
-    // 【新增】全局底部栏 HTML (包含 GitHub 和 YouTube 链接)
+    // GitHub 底部版权 HTML (不变)
     const footerHtml = `
-      <div style="text-align: center; margin-top: 40px; padding-bottom: 20px; font-size: 13px; color: #6b7280;">
+      <div style="text-align: center; margin-top: 40px; padding-bottom: 20px; font-size: 13px; color: inherit; opacity: 0.8;">
         Powered by <a href="https://github.com/a63414262/CF-Server-Monitor-Pro" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">CF-Server-Monitor-Pro</a> | 
         <a href="https://www.youtube.com/@%E5%B0%8FK%E5%88%86%E4%BA%AB" target="_blank" style="color: #ef4444; text-decoration: none; font-weight: 600;">▶️ 小K分享频道</a>
       </div>
+    `;
+
+    // 【核心】5种主题差异化 CSS 及 自定义背景透明 CSS
+    const themeStyles = `
+      /* Theme 1: 默认清爽白 (Classic) 保持原样 */
+      
+      /* Theme 2: 暗黑极客 (Dark Mode) */
+      body.theme2 { background-color: #0d1117; color: #c9d1d9; }
+      .theme2 .vps-card, .theme2 .global-stats, .theme2 .header-card, .theme2 .chart-card { background: #161b22; color: #c9d1d9; box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: 1px solid #30363d; }
+      .theme2 .vps-card:hover { border-color: #8b949e; }
+      .theme2 .group-header { color: #58a6ff; border-left-color: #58a6ff; }
+      .theme2 .stat-val, .theme2 .g-val { color: #fff; }
+      .theme2 .stat-label, .theme2 .g-label, .theme2 .g-sub, .theme2 .card-meta { color: #8b949e; }
+      .theme2 .stat-bar { background: #21262d; }
+      .theme2 .divider { background: #30363d; }
+      .theme2 .card-title { color: #fff; }
+
+      /* Theme 3: 新粗野主义 (Brutalism) 差异极其明显 */
+      body.theme3 { background-color: #fef08a; color: #000; font-weight: 500; }
+      .theme3 .vps-card, .theme3 .global-stats, .theme3 .header-card, .theme3 .chart-card { background: #fff; border: 3px solid #000; border-radius: 0; box-shadow: 6px 6px 0px #000; transition: transform 0.1s, box-shadow 0.1s; }
+      .theme3 .vps-card:hover { transform: translate(2px, 2px); box-shadow: 4px 4px 0px #000; border-color: #000; }
+      .theme3 .group-header { color: #000; border-left: none; border-bottom: 4px solid #000; padding-left: 0; display: inline-block; font-size: 22px; font-weight: 900; text-transform: uppercase; }
+      .theme3 .stat-bar { background: #e5e5e5; border: 1px solid #000; }
+      .theme3 .stat-bar > div { border-right: 1px solid #000; }
+      .theme3 .badge { border: 1px solid #000; border-radius: 0; }
+      .theme3 .stat-val, .theme3 .g-val, .theme3 .card-title { font-weight: 900; color: #000; }
+
+      /* Theme 4: 毛玻璃渐变 (Glassmorphism) */
+      body.theme4 { background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%); background-attachment: fixed; color: #fff; }
+      .theme4 .vps-card, .theme4 .global-stats, .theme4 .header-card, .theme4 .chart-card { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); color: #fff; }
+      .theme4 .vps-card:hover { background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.8); }
+      .theme4 .group-header { color: #fff; border-left-color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+      .theme4 .stat-val, .theme4 .g-val, .theme4 .card-title { color: #fff; }
+      .theme4 .stat-label, .theme4 .g-label, .theme4 .g-sub, .theme4 .card-meta { color: rgba(255,255,255,0.8); }
+      .theme4 .stat-bar { background: rgba(0,0,0,0.2); }
+      .theme4 .divider { background: rgba(255,255,255,0.2); }
+
+      /* Theme 5: 赛博朋克 (Cyberpunk) */
+      body.theme5 { background-color: #050505; color: #0ff; font-family: 'Courier New', Courier, monospace; }
+      .theme5 .vps-card, .theme5 .global-stats, .theme5 .header-card, .theme5 .chart-card { background: #0b0c10; border: 1px solid #f0f; border-radius: 0; box-shadow: 0 0 10px rgba(255, 0, 255, 0.2); color: #fff; }
+      .theme5 .vps-card:hover { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); border-color: #0ff; }
+      .theme5 .group-header { color: #f0f; border-left: 5px solid #0ff; text-shadow: 0 0 5px #f0f; }
+      .theme5 .stat-val, .theme5 .g-val, .theme5 .card-title { color: #0ff; text-shadow: 0 0 5px #0ff; }
+      .theme5 .stat-label, .theme5 .g-label, .theme5 .g-sub, .theme5 .card-meta { color: #f0f; }
+      .theme5 .stat-bar { background: #222; }
+      .theme5 .stat-bar > div { background: #0ff !important; box-shadow: 0 0 10px #0ff; }
+      .theme5 .divider { background: #333; }
+      .theme5 .badge-bw { background: #f0f; box-shadow: 0 0 5px #f0f; }
+      .theme5 .badge-tf { background: #0ff; color:#000; box-shadow: 0 0 5px #0ff; }
+
+      /* 核心功能：如果有自定义背景图，强制启用透明毛玻璃效果 */
+      ${sys.custom_bg ? `
+        body {
+          background: url('${sys.custom_bg}') no-repeat center center fixed !important;
+          background-size: cover !important;
+        }
+        .vps-card, .global-stats, .header-card, .chart-card {
+          background: rgba(255, 255, 255, 0.4) !important; 
+          backdrop-filter: blur(12px) !important;
+          -webkit-backdrop-filter: blur(12px) !important;
+          border: 1px solid rgba(255, 255, 255, 0.6) !important;
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important;
+          color: #111 !important;
+        }
+        .vps-card:hover { background: rgba(255, 255, 255, 0.6) !important; transform: translateY(-3px); }
+        .group-header { color: #fff !important; text-shadow: 0 2px 5px rgba(0,0,0,0.6) !important; border-left-color: #fff !important; }
+        .stat-val, .g-val, .card-title { color: #000 !important; font-weight: 800 !important; }
+        .stat-label, .g-label, .g-sub, .card-meta { color: #333 !important; font-weight: 600 !important; }
+        .stat-bar { background: rgba(0,0,0,0.1) !important; }
+      ` : ''}
     `;
 
     // ==========================================
@@ -142,11 +219,11 @@ export default {
           th { background: #f8f9fa; }
           .btn { cursor: pointer; border-radius: 4px; font-size: 13px; transition: opacity 0.2s; border: none; padding: 6px 10px; color: white; margin-left: 5px; }
           .btn:hover { opacity: 0.8; }
-          .btn-blue { background: #3b82f6; } .btn-green { background: #10b981; } .btn-red { background: #ef4444; }
+          .btn-blue { background: #3b82f6; } .btn-green { background: #10b981; } .btn-red { background: #ef4444; } .btn-gray { background: #6b7280; }
           .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
           .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
           .form-group label { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #555;}
-          .form-group input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+          .form-group input[type="text"], .form-group select { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
           .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 14px;}
           .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
           .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; }
@@ -161,6 +238,26 @@ export default {
           <div class="settings-grid">
             <div>
               <div class="form-group">
+                <label>🎨 前端主题风格 (5选1)</label>
+                <select id="cfg_theme">
+                  <option value="theme1" ${sys.theme === 'theme1' ? 'selected' : ''}>1. 默认清爽白 (Classic White)</option>
+                  <option value="theme2" ${sys.theme === 'theme2' ? 'selected' : ''}>2. 暗黑极客 (Dark Mode)</option>
+                  <option value="theme3" ${sys.theme === 'theme3' ? 'selected' : ''}>3. 新粗野主义 (Brutalism)</option>
+                  <option value="theme4" ${sys.theme === 'theme4' ? 'selected' : ''}>4. 动态渐变毛玻璃 (Glassmorphism)</option>
+                  <option value="theme5" ${sys.theme === 'theme5' ? 'selected' : ''}>5. 赛博朋克 (Cyberpunk)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>🖼️ 自定义背景图片 (上传或填URL，开启后强制全透明)</label>
+                <div style="display:flex; gap:8px;">
+                   <input type="text" id="cfg_custom_bg" value="${sys.custom_bg || ''}" placeholder="粘贴图片 URL 或 点击右侧按钮上传" style="flex:1;">
+                   <input type="file" id="bg_file" accept="image/*" style="display:none;" onchange="uploadBg(this)">
+                   <button class="btn btn-gray" onclick="document.getElementById('bg_file').click()">📁 本地上传</button>
+                </div>
+                <img id="bg_preview" src="${sys.custom_bg || ''}" style="max-height: 120px; margin-top: 10px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: ${sys.custom_bg ? 'block' : 'none'}; object-fit: cover;">
+                <span style="font-size:12px; color:#888; margin-top:5px;">* 上传的图片会自动转码保存，建议小于 500KB 以保证加载速度。清除输入框并保存即可恢复纯色主题。</span>
+              </div>
+              <div class="form-group">
                 <label>前台看板标题</label>
                 <input type="text" id="cfg_site_title" value="${sys.site_title}">
               </div>
@@ -170,7 +267,7 @@ export default {
               </div>
             </div>
             <div>
-              <label style="font-size: 14px; font-weight: 600; margin-bottom: 10px; display: block; color: #555;">前台展示控制</label>
+              <label style="font-size: 14px; font-weight: 600; margin-bottom: 10px; display: block; color: #555;">👁️ 前台展示控制</label>
               <div class="checkbox-group">
                 <input type="checkbox" id="cfg_is_public" ${sys.is_public === 'true' ? 'checked' : ''}>
                 <label for="cfg_is_public"><b>公开访问</b> (取消勾选后，访客必须输入密码才能查看探针)</label>
@@ -228,10 +325,28 @@ export default {
         ${footerHtml}
 
         <script>
+          // 图片上传转 Base64 功能
+          function uploadBg(input) {
+            const file = input.files[0];
+            if(!file) return;
+            if(file.size > 800 * 1024) {
+              alert('图片有点大，已尽量加载。为保证性能，建议使用 500KB 以下的图片或直接填写图片外部URL！');
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              document.getElementById('cfg_custom_bg').value = e.target.result;
+              document.getElementById('bg_preview').src = e.target.result;
+              document.getElementById('bg_preview').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+          }
+
           async function saveSettings() {
             const data = {
               action: 'save_settings',
               settings: {
+                theme: document.getElementById('cfg_theme').value,
+                custom_bg: document.getElementById('cfg_custom_bg').value,
                 site_title: document.getElementById('cfg_site_title').value,
                 admin_title: document.getElementById('cfg_admin_title').value,
                 is_public: document.getElementById('cfg_is_public').checked ? 'true' : 'false',
@@ -287,7 +402,7 @@ export default {
     }
 
     // ==========================================
-    // 3. 一键安装脚本 (/install.sh)
+    // 3. 一键安装脚本 (/install.sh) 保持不变
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/install.sh') {
       const sh_bin = "/bin" + "/bash";
@@ -508,9 +623,10 @@ echo "✅ 探针安装成功！"
             .chart-val { font-size: 18px; font-weight: bold; }
             canvas { max-height: 150px; }
             .back-btn { display: inline-block; margin-bottom: 15px; color: #3b82f6; text-decoration: none; font-weight: 500; }
+            ${themeStyles}
           </style>
         </head>
-        <body>
+        <body class="${sys.theme || 'theme1'}">
           <div class="container">
             <a href="/" class="back-btn">⬅ 返回大盘</a>
             <div class="header-card">
@@ -571,7 +687,7 @@ echo "✅ 探针安装成功！"
       }
 
       // ----------------------------------------
-      // 视图 B：全新前台大盘 (带条件渲染控制)
+      // 视图 B：全新前台大盘 (带条件渲染和主题控制)
       // ----------------------------------------
       const { results } = await env.DB.prepare('SELECT * FROM servers').all();
       const now = Date.now();
@@ -643,7 +759,7 @@ echo "✅ 探针安装成功！"
                 <div class="card-left">
                   <div class="card-title">
                     <div class="status-dot" style="background:${statusColor};"></div>
-                    ${flagHtml} <span style="font-weight:600; font-size:15px;">${server.name}</span>
+                    ${flagHtml} <span style="font-size:15px;" class="card-title-text">${server.name}</span>
                   </div>
                   ${metaHtml}
                   <div class="card-badges">${badgesHtml}</div>
@@ -683,6 +799,7 @@ echo "✅ 探针安装成功！"
           .vps-card:hover { border-color: #e5e7eb; transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
           .card-left { flex: 0 0 180px; display: flex; flex-direction: column; justify-content: center; }
           .card-title { display: flex; align-items: center; margin-bottom: 4px; }
+          .card-title-text { font-weight: 600; }
           .status-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; flex-shrink:0; }
           .card-meta { font-size: 12px; color: #6b7280; margin-bottom: 3px; }
           .card-badges { margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
@@ -695,12 +812,13 @@ echo "✅ 探针安装成功！"
           .stat-bar { width: 100%; height: 3px; background: #e5e7eb; border-radius: 2px; overflow: hidden; }
           .stat-bar > div { height: 100%; background: #3b82f6; border-radius: 2px; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-          .admin-btn { padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; }
+          .admin-btn { padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight:bold; }
           @media (max-width: 600px) { .grid-container { grid-template-columns: 1fr; } .vps-card { flex-direction: column; } .card-right { padding-left: 0; border-left: none; border-top: 1px solid #f0f0f0; margin-top: 15px; padding-top: 15px; } }
+          ${themeStyles}
         </style>
         <meta http-equiv="refresh" content="5">
       </head>
-      <body>
+      <body class="${sys.theme || 'theme1'}">
         <div class="container">
           <div class="header">
             <h1 style="margin:0;">${sys.site_title}</h1>
