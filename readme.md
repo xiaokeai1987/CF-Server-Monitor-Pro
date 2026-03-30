@@ -52,7 +52,9 @@
 3. 进入该数据库的 **Console (控制台)**，执行以下两个 SQL 语句来初始化表结构：
 
 
-第一个-- 创建服务器节点表
+
+
+### 第一个-- 创建服务器节点表
 
 CREATE TABLE servers (
     id TEXT PRIMARY KEY,
@@ -66,28 +68,27 @@ CREATE TABLE servers (
     bandwidth TEXT DEFAULT '', traffic_limit TEXT DEFAULT ''
 );
 
-第二个-- 创建全局设置表
+### 第二个-- 创建全局设置表
 
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
 ```
-
-### 第二步：创建并配置 Cloudflare Worker
+第二步：创建并配置 Cloudflare Worker
 1. 在 **Workers & Pages** 中创建一个新的 Worker。
 2. 进入该 Worker 的 **Settings (设置)** -> **Variables (变量与机密)**：
    - **绑定 D1 数据库**：变量名填 `DB`，选择你刚才创建的 `probe-db`。
    - **设置后台密码**：添加环境变量 `API_SECRET`，值为你自定义的管理后台登录密码（类型选择“文本”或“机密”均可）。
 
-### 第三步：部署代码
+ 第三步：部署代码
 1. 返回 Worker 的代码编辑页面（Edit Code）。
 2. 将本项目中的 `worker.js` 代码全部复制并覆盖进去。
 3. 点击 **Deploy (部署)**。
 
 ---
 
-## 💻 使用说明
+ 💻 使用说明
 
 1. **访问后台**：在浏览器访问 `https://你的Worker域名/admin`。
 2. **登录认证**：弹出的身份验证中，用户名为 `admin`，密码为你设置的 `API_SECRET` 的值。
@@ -97,7 +98,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 ---
 
-## ⚙️ 探针卸载 (Agent)
+ ⚙️ 探针卸载 (Agent)
 
 如果需要从被控端 VPS 卸载探针服务，请在 VPS 终端执行以下命令：
 ```bash
