@@ -28,8 +28,6 @@
 ---
 ## 📸 界面预览
 
-*(💡 提示：在这里替换为你自己的截图链接)*
-
 ### 1. 前台多节点大盘与全局统计
 <img width="3994" height="1830" alt="image" src="https://github.com/user-attachments/assets/e993f66e-7d3f-4481-ab02-e37edb63a7a1" />
 
