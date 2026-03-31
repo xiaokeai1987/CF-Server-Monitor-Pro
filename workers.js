@@ -35,7 +35,7 @@ export default {
       headers: { 'WWW-Authenticate': `Basic realm="${realmTitle}"` }
     });
 
-    // 默认全局设置 (新增了 custom_bg)
+    // 默认全局设置 (新增了 custom_bg 和 tg 设置)
     let sys = {
       site_title: '⚡ Server Monitor Pro',
       admin_title: '⚙️ 探针管理后台',
@@ -45,7 +45,10 @@ export default {
       show_price: 'true',
       show_expire: 'true',
       show_bw: 'true',
-      show_tf: 'true'
+      show_tf: 'true',
+      tg_notify: 'false',
+      tg_bot_token: '',
+      tg_chat_id: ''
     };
 
     try {
@@ -54,6 +57,53 @@ export default {
         results.forEach(r => sys[r.key] = r.value);
       }
     } catch (e) {}
+
+    // ==========================================
+    // 新增: Telegram 离线检测与通知机制
+    // ==========================================
+    const sendTelegram = async (msg) => {
+      if (sys.tg_notify !== 'true' || !sys.tg_bot_token || !sys.tg_chat_id) return;
+      try {
+        await fetch(`https://api.telegram.org/bot${sys.tg_bot_token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: sys.tg_chat_id, text: msg, parse_mode: 'HTML' })
+        });
+      } catch (e) {}
+    };
+
+    const checkOfflineNodes = async () => {
+      if (sys.tg_notify !== 'true') return;
+      try {
+        const { results: allServers } = await env.DB.prepare('SELECT id, name, last_updated FROM servers').all();
+        let alertState = {};
+        const stateRes = await env.DB.prepare("SELECT value FROM settings WHERE key = 'alert_state'").first();
+        if (stateRes) alertState = JSON.parse(stateRes.value);
+
+        let stateChanged = false;
+        const now = Date.now();
+
+        for (const s of allServers) {
+          const diff = now - s.last_updated;
+          // 超过 120 秒未更新视为离线
+          const isOffline = diff > 120000; 
+
+          if (isOffline && !alertState[s.id]) {
+            await sendTelegram(`⚠️ <b>节点离线告警</b>\n\n<b>节点名称:</b> ${s.name}\n<b>状态:</b> 离线 (超过2分钟未上报)\n<b>时间:</b> ${new Date().toLocaleString('zh-CN', {timeZone: 'Asia/Shanghai'})}`);
+            alertState[s.id] = true;
+            stateChanged = true;
+          } else if (!isOffline && alertState[s.id]) {
+            await sendTelegram(`✅ <b>节点恢复通知</b>\n\n<b>节点名称:</b> ${s.name}\n<b>状态:</b> 恢复在线\n<b>时间:</b> ${new Date().toLocaleString('zh-CN', {timeZone: 'Asia/Shanghai'})}`);
+            delete alertState[s.id];
+            stateChanged = true;
+          }
+        }
+
+        if (stateChanged) {
+          await env.DB.prepare('INSERT INTO settings (key, value) VALUES ("alert_state", ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').bind(JSON.stringify(alertState)).run();
+        }
+      } catch (e) {}
+    };
 
     // GitHub 底部版权 HTML (不变)
     const footerHtml = `
@@ -287,6 +337,25 @@ export default {
                 <input type="checkbox" id="cfg_show_tf" ${sys.show_tf === 'true' ? 'checked' : ''}>
                 <label for="cfg_show_tf">在前台显示 <b>流量配额徽章</b></label>
               </div>
+
+              <hr style="margin: 20px 0; border: none; border-top: 1px dashed #ccc;">
+              <label style="font-size: 14px; font-weight: 600; margin-bottom: 10px; display: block; color: #e63946;">✈️ Telegram 离线告警设置</label>
+              <div class="form-group">
+                <label>开启离线通知</label>
+                <select id="cfg_tg_notify">
+                  <option value="false" ${sys.tg_notify !== 'true' ? 'selected' : ''}>关闭告警</option>
+                  <option value="true" ${sys.tg_notify === 'true' ? 'selected' : ''}>开启告警 (超过2分钟掉线自动推送)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Bot Token</label>
+                <input type="text" id="cfg_tg_bot_token" value="${sys.tg_bot_token || ''}" placeholder="如: 12345678:ABCDEFG...">
+              </div>
+              <div class="form-group">
+                <label>Chat ID</label>
+                <input type="text" id="cfg_tg_chat_id" value="${sys.tg_chat_id || ''}" placeholder="如: 123456789">
+              </div>
+
             </div>
           </div>
           <button onclick="saveSettings()" class="btn btn-blue" style="padding: 10px 20px; font-size: 15px;">💾 保存全局设置</button>
@@ -352,7 +421,11 @@ export default {
                 show_price: document.getElementById('cfg_show_price').checked ? 'true' : 'false',
                 show_expire: document.getElementById('cfg_show_expire').checked ? 'true' : 'false',
                 show_bw: document.getElementById('cfg_show_bw').checked ? 'true' : 'false',
-                show_tf: document.getElementById('cfg_show_tf').checked ? 'true' : 'false'
+                show_tf: document.getElementById('cfg_show_tf').checked ? 'true' : 'false',
+                // 添加 Telegram 设值的保存
+                tg_notify: document.getElementById('cfg_tg_notify').value,
+                tg_bot_token: document.getElementById('cfg_tg_bot_token').value,
+                tg_chat_id: document.getElementById('cfg_tg_chat_id').value
               }
             };
             const res = await fetch('/admin/api', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
@@ -561,6 +634,9 @@ echo "✅ 探针安装成功！"
           metrics.tcp_conn || '0', metrics.udp_conn || '0', countryCode, 
           metrics.ip_v4 || '0', metrics.ip_v6 || '0', id
         ).run();
+
+        // 关键新增：在正常上报后触发检查逻辑，如果此时有别的机器超时未报，则触发电报通知
+        ctx.waitUntil(checkOfflineNodes());
 
         return new Response('OK', { status: 200 });
       } catch (e) {
