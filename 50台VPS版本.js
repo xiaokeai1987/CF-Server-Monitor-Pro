@@ -471,6 +471,7 @@ export default {
       const sh_sys = "system" + "ctl";
       const sh_curl = "cur" + "l";
 
+      // 完美还原了转义符号，并应用了60秒优化
       const bashScript = `#!${sh_bin}
 SERVER_ID=$1
 SECRET=$2
@@ -488,79 +489,79 @@ SERVER_ID="$1"
 SECRET="$2"
 WORKER_URL="$3"
 
-get_net_bytes() { awk 'NR>2 {rx+=$2; tx+=$10} END {printf "%.0f %.0f", rx, tx}' /proc/net/dev; }
-get_cpu_stat() { awk '/^cpu / {print $2+$3+$4+$5+$6+$7+$8+$9, $5+$6}' /proc/stat; }
+get_net_bytes() { awk 'NR>2 {rx+=\$2; tx+=\$10} END {printf "%.0f %.0f", rx, tx}' /proc/net/dev; }
+get_cpu_stat() { awk '/^cpu / {print \$2+\$3+\$4+\$5+\$6+\$7+\$8+\$9, \$5+\$6}' /proc/stat; }
 
-NET_STAT=$(get_net_bytes)
-RX_PREV=$(echo $NET_STAT | awk '{print $1}')
-TX_PREV=$(echo $NET_STAT | awk '{print $2}')
-if [ -z "$RX_PREV" ]; then RX_PREV=0; fi
-if [ -z "$TX_PREV" ]; then TX_PREV=0; fi
+NET_STAT=\$(get_net_bytes)
+RX_PREV=\$(echo \$NET_STAT | awk '{print \$1}')
+TX_PREV=\$(echo \$NET_STAT | awk '{print \$2}')
+if [ -z "\$RX_PREV" ]; then RX_PREV=0; fi
+if [ -z "\$TX_PREV" ]; then TX_PREV=0; fi
 
-CPU_STAT=$(get_cpu_stat)
-PREV_CPU_TOTAL=$(echo $CPU_STAT | awk '{print $1}')
-PREV_CPU_IDLE=$(echo $CPU_STAT | awk '{print $2}')
+CPU_STAT=\$(get_cpu_stat)
+PREV_CPU_TOTAL=\$(echo \$CPU_STAT | awk '{print \$1}')
+PREV_CPU_IDLE=\$(echo \$CPU_STAT | awk '{print \$2}')
 
 LOOP_COUNT=0
 IPV4="0"; IPV6="0"
 
 while true; do
-  if [ $((LOOP_COUNT % 60)) -eq 0 ]; then
+  if [ \$((LOOP_COUNT % 60)) -eq 0 ]; then
     ${sh_curl} -s -4 -m 3 https://cloudflare.com/cdn-cgi/trace 2>/dev/null | grep -q "ip=" && IPV4="1" || IPV4="0"
     ${sh_curl} -s -6 -m 3 https://cloudflare.com/cdn-cgi/trace 2>/dev/null | grep -q "ip=" && IPV6="1" || IPV6="0"
   fi
-  LOOP_COUNT=$((LOOP_COUNT + 1))
+  LOOP_COUNT=\$((LOOP_COUNT + 1))
 
-  OS=$(awk -F= '/^PRETTY_NAME/{print $2}' /etc/os-release | tr -d '"')
-  if [ -z "$OS" ]; then OS=$(uname -srm); fi
-  ARCH=$(uname -m)
-  BOOT_TIME=$(uptime -s 2>/dev/null || stat -c %y / 2>/dev/null | cut -d'.' -f1 || echo "Unknown")
-  CPU_INFO=$(grep -m 1 'model name' /proc/cpuinfo | awk -F: '{print $2}' | xargs | tr -d '"')
+  OS=\$(awk -F= '/^PRETTY_NAME/{print \$2}' /etc/os-release | tr -d '"')
+  if [ -z "\$OS" ]; then OS=\$(uname -srm); fi
+  ARCH=\$(uname -m)
+  BOOT_TIME=\$(uptime -s 2>/dev/null || stat -c %y / 2>/dev/null | cut -d'.' -f1 || echo "Unknown")
+  CPU_INFO=\$(grep -m 1 'model name' /proc/cpuinfo | awk -F: '{print \$2}' | xargs | tr -d '"')
   
-  CPU_STAT=$(get_cpu_stat)
-  CPU_TOTAL=$(echo $CPU_STAT | awk '{print $1}')
-  CPU_IDLE=$(echo $CPU_STAT | awk '{print $2}')
-  DIFF_TOTAL=$((CPU_TOTAL - PREV_CPU_TOTAL))
-  DIFF_IDLE=$((CPU_IDLE - PREV_CPU_IDLE))
-  CPU=$(awk -v t=$DIFF_TOTAL -v i=$DIFF_IDLE 'BEGIN {if (t==0) print 0; else printf "%.2f", (1 - i/t)*100}')
-  PREV_CPU_TOTAL=$CPU_TOTAL; PREV_CPU_IDLE=$CPU_IDLE
+  CPU_STAT=\$(get_cpu_stat)
+  CPU_TOTAL=\$(echo \$CPU_STAT | awk '{print \$1}')
+  CPU_IDLE=\$(echo \$CPU_STAT | awk '{print \$2}')
+  DIFF_TOTAL=\$((CPU_TOTAL - PREV_CPU_TOTAL))
+  DIFF_IDLE=\$((CPU_IDLE - PREV_CPU_IDLE))
+  CPU=\$(awk -v t=\$DIFF_TOTAL -v i=\$DIFF_IDLE 'BEGIN {if (t==0) print 0; else printf "%.2f", (1 - i/t)*100}')
+  PREV_CPU_TOTAL=\$CPU_TOTAL; PREV_CPU_IDLE=\$CPU_IDLE
   
-  MEM_INFO=$(free -m)
-  RAM_TOTAL=$(echo "$MEM_INFO" | awk '/Mem:/ {print $2}')
-  RAM_USED=$(echo "$MEM_INFO" | awk '/Mem:/ {print $3}')
-  RAM=$(awk "BEGIN {if($RAM_TOTAL>0) printf \"%.2f\", $RAM_USED/$RAM_TOTAL * 100.0; else print 0}")
+  MEM_INFO=\$(free -m)
+  RAM_TOTAL=\$(echo "\$MEM_INFO" | awk '/Mem:/ {print \$2}')
+  RAM_USED=\$(echo "\$MEM_INFO" | awk '/Mem:/ {print \$3}')
+  RAM=\$(awk "BEGIN {if(\$RAM_TOTAL>0) printf \\"%.2f\\", \$RAM_USED/\$RAM_TOTAL * 100.0; else print 0}")
   
-  SWAP_TOTAL=$(echo "$MEM_INFO" | awk '/Swap:/ {print $2}')
-  SWAP_USED=$(echo "$MEM_INFO" | awk '/Swap:/ {print $3}')
-  if [ -z "$SWAP_TOTAL" ]; then SWAP_TOTAL=0; fi
-  if [ -z "$SWAP_USED" ]; then SWAP_USED=0; fi
+  SWAP_TOTAL=\$(echo "\$MEM_INFO" | awk '/Swap:/ {print \$2}')
+  SWAP_USED=\$(echo "\$MEM_INFO" | awk '/Swap:/ {print \$3}')
+  if [ -z "\$SWAP_TOTAL" ]; then SWAP_TOTAL=0; fi
+  if [ -z "\$SWAP_USED" ]; then SWAP_USED=0; fi
 
-  DISK_INFO=$(df -hm / | tail -n1 | awk '{print $2, $3, $5}')
-  DISK_TOTAL=$(echo "$DISK_INFO" | awk '{print $1}')
-  DISK_USED=$(echo "$DISK_INFO" | awk '{print $2}')
-  DISK=$(echo "$DISK_INFO" | awk '{print $3}' | tr -d '%')
+  DISK_INFO=\$(df -hm / | tail -n1 | awk '{print \$2, \$3, \$5}')
+  DISK_TOTAL=\$(echo "\$DISK_INFO" | awk '{print \$1}')
+  DISK_USED=\$(echo "\$DISK_INFO" | awk '{print \$2}')
+  DISK=\$(echo "\$DISK_INFO" | awk '{print \$3}' | tr -d '%')
 
-  LOAD=$(cat /proc/loadavg | awk '{print $1, $2, $3}')
-  UPTIME=$(uptime -p | sed 's/up //')
+  LOAD=\$(cat /proc/loadavg | awk '{print \$1, \$2, \$3}')
+  UPTIME=\$(uptime -p | sed 's/up //')
   
-  PROCESSES=$(ps -e | wc -l)
-  TCP_CONN=$(ss -ant 2>/dev/null | grep -v State | wc -l || netstat -ant 2>/dev/null | grep -v Active | wc -l)
-  UDP_CONN=$(ss -anu 2>/dev/null | grep -v State | wc -l || netstat -anu 2>/dev/null | grep -v Active | wc -l)
+  PROCESSES=\$(ps -e | wc -l)
+  TCP_CONN=\$(ss -ant 2>/dev/null | grep -v State | wc -l || netstat -ant 2>/dev/null | grep -v Active | wc -l)
+  UDP_CONN=\$(ss -anu 2>/dev/null | grep -v State | wc -l || netstat -anu 2>/dev/null | grep -v Active | wc -l)
   
-  NET_STAT=$(get_net_bytes)
-  RX_NOW=$(echo $NET_STAT | awk '{print $1}')
-  TX_NOW=$(echo $NET_STAT | awk '{print $2}')
-  if [ -z "$RX_NOW" ]; then RX_NOW=0; fi
-  if [ -z "$TX_NOW" ]; then TX_NOW=0; fi
+  NET_STAT=\$(get_net_bytes)
+  RX_NOW=\$(echo \$NET_STAT | awk '{print \$1}')
+  TX_NOW=\$(echo \$NET_STAT | awk '{print \$2}')
+  if [ -z "\$RX_NOW" ]; then RX_NOW=0; fi
+  if [ -z "\$TX_NOW" ]; then TX_NOW=0; fi
 
   # [优化] 上报时间改为 60 秒，网速计算除数同步改为 60
-  RX_SPEED=$(((RX_NOW - RX_PREV) / 60))
-  TX_SPEED=$(((TX_NOW - TX_PREV) / 60))
-  RX_PREV=$RX_NOW; TX_PREV=$TX_NOW
+  RX_SPEED=\$(((RX_NOW - RX_PREV) / 60))
+  TX_SPEED=\$(((TX_NOW - TX_PREV) / 60))
+  RX_PREV=\$RX_NOW; TX_PREV=\$TX_NOW
   
-  PAYLOAD="{\"id\": \"$SERVER_ID\", \"secret\": \"$SECRET\", \"metrics\": { \"cpu\": \"$CPU\", \"ram\": \"$RAM\", \"ram_total\": \"$RAM_TOTAL\", \"ram_used\": \"$RAM_USED\", \"swap_total\": \"$SWAP_TOTAL\", \"swap_used\": \"$SWAP_USED\", \"disk\": \"$DISK\", \"disk_total\": \"$DISK_TOTAL\", \"disk_used\": \"$DISK_USED\", \"load\": \"$LOAD\", \"uptime\": \"$UPTIME\", \"boot_time\": \"$BOOT_TIME\", \"net_rx\": \"$RX_NOW\", \"net_tx\": \"$TX_NOW\", \"net_in_speed\": \"$RX_SPEED\", \"net_out_speed\": \"$TX_SPEED\", \"os\": \"$OS\", \"arch\": \"$ARCH\", \"cpu_info\": \"$CPU_INFO\", \"processes\": \"$PROCESSES\", \"tcp_conn\": \"$TCP_CONN\", \"udp_conn\": \"$UDP_CONN\", \"ip_v4\": \"$IPV4\", \"ip_v6\": \"$IPV6\" }}"
+  PAYLOAD="{\\"id\\": \\"\$SERVER_ID\\", \\"secret\\": \\"\$SECRET\\", \\"metrics\\": { \\"cpu\\": \\"\$CPU\\", \\"ram\\": \\"\$RAM\\", \\"ram_total\\": \\"\$RAM_TOTAL\\", \\"ram_used\\": \\"\$RAM_USED\\", \\"swap_total\\": \\"\$SWAP_TOTAL\\", \\"swap_used\\": \\"\$SWAP_USED\\", \\"disk\\": \\"\$DISK\\", \\"disk_total\\": \\"\$DISK_TOTAL\\", \\"disk_used\\": \\"\$DISK_USED\\", \\"load\\": \\"\$LOAD\\", \\"uptime\\": \\"\$UPTIME\\", \\"boot_time\\": \\"\$BOOT_TIME\\", \\"net_rx\\": \\"\$RX_NOW\\", \\"net_tx\\": \\"\$TX_NOW\\", \\"net_in_speed\\": \\"\$RX_SPEED\\", \\"net_out_speed\\": \\"\$TX_SPEED\\", \\"os\\": \\"\$OS\\", \\"arch\\": \\"\$ARCH\\", \\"cpu_info\\": \\"\$CPU_INFO\\", \\"processes\\": \\"\$PROCESSES\\", \\"tcp_conn\\": \\"\$TCP_CONN\\", \\"udp_conn\\": \\"\$UDP_CONN\\", \\"ip_v4\\": \\"\$IPV4\\", \\"ip_v6\\": \\"\$IPV6\\" }}"
   
-  ${sh_curl} -s -X POST -H "Content-Type: application/json" -d "$PAYLOAD" "$WORKER_URL" > /dev/null
+  ${sh_curl} -s -X POST -H "Content-Type: application/json" -d "\$PAYLOAD" "$WORKER_URL" > /dev/null
   
   # [优化] 心跳间隔改为 60 秒
   sleep 60
