@@ -35,12 +35,12 @@ export default {
       headers: { 'WWW-Authenticate': `Basic realm="${realmTitle}"` }
     });
 
-    // 默认全局设置 (新增了 custom_bg 和 tg 设置)
+    // 默认全局设置 (新增了 auto_reset_traffic)
     let sys = {
       site_title: '⚡ Server Monitor Pro',
       admin_title: '⚙️ 探针管理后台',
       theme: 'theme1', 
-      custom_bg: '', // 自定义背景图 Base64 或 URL
+      custom_bg: '',
       is_public: 'true',
       show_price: 'true',
       show_expire: 'true',
@@ -48,7 +48,8 @@ export default {
       show_tf: 'true',
       tg_notify: 'false',
       tg_bot_token: '',
-      tg_chat_id: ''
+      tg_chat_id: '',
+      auto_reset_traffic: 'false' // 新增：是否开启每月1号重置流量
     };
 
     try {
@@ -59,7 +60,7 @@ export default {
     } catch (e) {}
 
     // ==========================================
-    // 新增: Telegram 离线检测与通知机制
+    // Telegram 离线检测与通知机制
     // ==========================================
     const sendTelegram = async (msg) => {
       if (sys.tg_notify !== 'true' || !sys.tg_bot_token || !sys.tg_chat_id) return;
@@ -85,7 +86,6 @@ export default {
 
         for (const s of allServers) {
           const diff = now - s.last_updated;
-          // 超过 120 秒未更新视为离线
           const isOffline = diff > 120000; 
 
           if (isOffline && !alertState[s.id]) {
@@ -105,7 +105,6 @@ export default {
       } catch (e) {}
     };
 
-    // GitHub 底部版权 HTML (不变)
     const footerHtml = `
       <div style="text-align: center; margin-top: 40px; padding-bottom: 20px; font-size: 13px; color: inherit; opacity: 0.8;">
         Powered by <a href="https://github.com/a63414262/CF-Server-Monitor-Pro" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">CF-Server-Monitor-Pro</a> | 
@@ -113,11 +112,7 @@ export default {
       </div>
     `;
 
-    // 【核心】5种主题差异化 CSS 及 自定义背景透明 CSS (增加了 ping-box 和 chart-full 样式)
     const themeStyles = `
-      /* Theme 1: 默认清爽白 (Classic) 保持原样 */
-      
-      /* Theme 2: 暗黑极客 (Dark Mode) */
       body.theme2 { background-color: #0d1117; color: #c9d1d9; }
       .theme2 .vps-card, .theme2 .global-stats, .theme2 .header-card, .theme2 .chart-card { background: #161b22; color: #c9d1d9; box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: 1px solid #30363d; }
       .theme2 .vps-card:hover { border-color: #8b949e; }
@@ -128,7 +123,6 @@ export default {
       .theme2 .divider { background: #30363d; }
       .theme2 .card-title { color: #fff; }
 
-      /* Theme 3: 新粗野主义 (Brutalism) 差异极其明显 */
       body.theme3 { background-color: #fef08a; color: #000; font-weight: 500; }
       .theme3 .vps-card, .theme3 .global-stats, .theme3 .header-card, .theme3 .chart-card { background: #fff; border: 3px solid #000; border-radius: 0; box-shadow: 6px 6px 0px #000; transition: transform 0.1s, box-shadow 0.1s; }
       .theme3 .vps-card:hover { transform: translate(2px, 2px); box-shadow: 4px 4px 0px #000; border-color: #000; }
@@ -138,7 +132,6 @@ export default {
       .theme3 .badge { border: 1px solid #000; border-radius: 0; }
       .theme3 .stat-val, .theme3 .g-val, .theme3 .card-title { font-weight: 900; color: #000; }
 
-      /* Theme 4: 毛玻璃渐变 (Glassmorphism) */
       body.theme4 { background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%); background-attachment: fixed; color: #fff; }
       .theme4 .vps-card, .theme4 .global-stats, .theme4 .header-card, .theme4 .chart-card { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); color: #fff; }
       .theme4 .vps-card:hover { background: rgba(255, 255, 255, 0.3); border-color: rgba(255, 255, 255, 0.8); }
@@ -148,7 +141,6 @@ export default {
       .theme4 .stat-bar { background: rgba(0,0,0,0.2); }
       .theme4 .divider { background: rgba(255,255,255,0.2); }
 
-      /* Theme 5: 赛博朋克 (Cyberpunk) */
       body.theme5 { background-color: #050505; color: #0ff; font-family: 'Courier New', Courier, monospace; }
       .theme5 .vps-card, .theme5 .global-stats, .theme5 .header-card, .theme5 .chart-card { background: #0b0c10; border: 1px solid #f0f; border-radius: 0; box-shadow: 0 0 10px rgba(255, 0, 255, 0.2); color: #fff; }
       .theme5 .vps-card:hover { box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); border-color: #0ff; }
@@ -165,20 +157,9 @@ export default {
       .chart-full { grid-column: 1 / -1; }
       .chart-full canvas { max-height: 250px !important; }
 
-      /* 核心功能：如果有自定义背景图，强制启用透明毛玻璃效果 */
       ${sys.custom_bg ? `
-        body {
-          background: url('${sys.custom_bg}') no-repeat center center fixed !important;
-          background-size: cover !important;
-        }
-        .vps-card, .global-stats, .header-card, .chart-card {
-          background: rgba(255, 255, 255, 0.4) !important; 
-          backdrop-filter: blur(12px) !important;
-          -webkit-backdrop-filter: blur(12px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.6) !important;
-          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important;
-          color: #111 !important;
-        }
+        body { background: url('${sys.custom_bg}') no-repeat center center fixed !important; background-size: cover !important; }
+        .vps-card, .global-stats, .header-card, .chart-card { background: rgba(255, 255, 255, 0.4) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border: 1px solid rgba(255, 255, 255, 0.6) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important; color: #111 !important; }
         .vps-card:hover { background: rgba(255, 255, 255, 0.6) !important; transform: translateY(-3px); }
         .group-header { color: #fff !important; text-shadow: 0 2px 5px rgba(0,0,0,0.6) !important; border-left-color: #fff !important; }
         .stat-val, .g-val, .card-title { color: #000 !important; font-weight: 800 !important; }
@@ -206,8 +187,8 @@ export default {
           const name = data.name || 'New Server';
           await env.DB.prepare(`
             INSERT INTO servers 
-            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, country, server_group, price, expire_date, bandwidth, traffic_limit, ip_v4, ip_v6, ping_ct, ping_cu, ping_cm, ping_bd) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, country, server_group, price, expire_date, bandwidth, traffic_limit, ip_v4, ip_v6, ping_ct, ping_cu, ping_cm, ping_bd, monthly_rx, monthly_tx, last_rx, last_tx, reset_month) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', '0', '0', '0', '')
           `).bind(id, name, '0', '0', '0', '0', '0', 0, '0', '0', '0', '0', '0', '', '', '', '默认分组', '免费', '', '', '', '0', '0', '0', '0', '0', '0').run();
           return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
         } 
@@ -322,6 +303,12 @@ export default {
             </div>
             <div>
               <label style="font-size: 14px; font-weight: 600; margin-bottom: 10px; display: block; color: #555;">👁️ 前台展示控制</label>
+              
+              <div class="checkbox-group" style="background:#fefce8; padding:8px; border-radius:6px; border:1px solid #fef08a; margin-bottom:15px;">
+                <input type="checkbox" id="cfg_auto_reset_traffic" ${sys.auto_reset_traffic === 'true' ? 'checked' : ''}>
+                <label for="cfg_auto_reset_traffic"><b>启用每月1号重置流量</b><br><span style="font-size:12px;color:#854d0e;font-weight:normal;">开启后大盘将计算自然月累计流量，且重启机器不会清零</span></label>
+              </div>
+
               <div class="checkbox-group">
                 <input type="checkbox" id="cfg_is_public" ${sys.is_public === 'true' ? 'checked' : ''}>
                 <label for="cfg_is_public"><b>公开访问</b> (取消勾选后，访客必须输入密码才能查看探针)</label>
@@ -398,7 +385,6 @@ export default {
         ${footerHtml}
 
         <script>
-          // 图片上传转 Base64 功能
           function uploadBg(input) {
             const file = input.files[0];
             if(!file) return;
@@ -423,6 +409,7 @@ export default {
                 site_title: document.getElementById('cfg_site_title').value,
                 admin_title: document.getElementById('cfg_admin_title').value,
                 is_public: document.getElementById('cfg_is_public').checked ? 'true' : 'false',
+                auto_reset_traffic: document.getElementById('cfg_auto_reset_traffic').checked ? 'true' : 'false',
                 show_price: document.getElementById('cfg_show_price').checked ? 'true' : 'false',
                 show_expire: document.getElementById('cfg_show_expire').checked ? 'true' : 'false',
                 show_bw: document.getElementById('cfg_show_bw').checked ? 'true' : 'false',
@@ -478,7 +465,7 @@ export default {
     }
 
     // ==========================================
-    // 3. 一键安装脚本 (/install.sh) (增加了三网延迟逻辑)
+    // 3. 一键安装脚本 (/install.sh)
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/install.sh') {
       const sh_bin = "/bin" + "/bash";
@@ -620,7 +607,7 @@ echo "✅ 探针安装成功！"
     }
 
     // ==========================================
-    // 4. API 接收数据 (/update) (接收并写入三网延迟)
+    // 4. API 接收数据 (/update) (核心流量累加与重置逻辑)
     // ==========================================
     if (request.method === 'POST' && url.pathname === '/update') {
       try {
@@ -632,8 +619,49 @@ echo "✅ 探针安装成功！"
         let countryCode = request.cf && request.cf.country ? request.cf.country : 'XX';
         if (countryCode.toUpperCase() === 'TW') countryCode = 'CN';
 
-        const serverExists = await env.DB.prepare('SELECT id FROM servers WHERE id = ?').bind(id).first();
+        const serverExists = await env.DB.prepare('SELECT * FROM servers WHERE id = ?').bind(id).first();
         if (!serverExists) return new Response('Server not found', { status: 404 });
+
+        // ----------------------------------------
+        // 流量累加与每月重置判定逻辑
+        // ----------------------------------------
+        const nowTime = new Date();
+        const tzOffset = 8 * 60 * 60000; // 使用东八区时间判断月份
+        const localNow = new Date(nowTime.getTime() + tzOffset);
+        const currentMonthStr = `${localNow.getFullYear()}-${localNow.getMonth() + 1}`;
+        
+        let monthly_rx = parseFloat(serverExists.monthly_rx || '0');
+        let monthly_tx = parseFloat(serverExists.monthly_tx || '0');
+        let last_rx = parseFloat(serverExists.last_rx || '0');
+        let last_tx = parseFloat(serverExists.last_tx || '0');
+        let reset_month = serverExists.reset_month || currentMonthStr;
+
+        // 如果启用了自动重置，且到了新自然月，进行清零
+        if (sys.auto_reset_traffic === 'true' && currentMonthStr !== reset_month) {
+            monthly_rx = 0;
+            monthly_tx = 0;
+            reset_month = currentMonthStr;
+        }
+
+        const current_rx = parseFloat(metrics.net_rx || '0');
+        const current_tx = parseFloat(metrics.net_tx || '0');
+
+        // 计算差值累加 (防 VPS 重启导致的清零)
+        if (current_rx >= last_rx) {
+            monthly_rx += (current_rx - last_rx);
+        } else {
+            // 如果 current < last，说明 VPS 重启过，直接加上当前值
+            monthly_rx += current_rx;
+        }
+
+        if (current_tx >= last_tx) {
+            monthly_tx += (current_tx - last_tx);
+        } else {
+            monthly_tx += current_tx;
+        }
+
+        last_rx = current_rx;
+        last_tx = current_tx;
 
         await env.DB.prepare(`
           UPDATE servers 
@@ -641,7 +669,8 @@ echo "✅ 探针安装成功！"
               ram_total = ?, net_rx = ?, net_tx = ?, net_in_speed = ?, net_out_speed = ?,
               os = ?, cpu_info = ?, arch = ?, boot_time = ?, ram_used = ?, swap_total = ?, 
               swap_used = ?, disk_total = ?, disk_used = ?, processes = ?, tcp_conn = ?, udp_conn = ?, 
-              country = ?, ip_v4 = ?, ip_v6 = ?, ping_ct = ?, ping_cu = ?, ping_cm = ?, ping_bd = ?
+              country = ?, ip_v4 = ?, ip_v6 = ?, ping_ct = ?, ping_cu = ?, ping_cm = ?, ping_bd = ?,
+              monthly_rx = ?, monthly_tx = ?, last_rx = ?, last_tx = ?, reset_month = ?
           WHERE id = ?
         `).bind(
           metrics.cpu, metrics.ram, metrics.disk, metrics.load, metrics.uptime, Date.now(),
@@ -653,10 +682,10 @@ echo "✅ 探针安装成功！"
           metrics.tcp_conn || '0', metrics.udp_conn || '0', countryCode, 
           metrics.ip_v4 || '0', metrics.ip_v6 || '0', 
           metrics.ping_ct || '0', metrics.ping_cu || '0', metrics.ping_cm || '0', metrics.ping_bd || '0', 
+          monthly_rx.toString(), monthly_tx.toString(), last_rx.toString(), last_tx.toString(), reset_month,
           id
         ).run();
 
-        // 关键新增：在正常上报后触发检查逻辑，如果此时有别的机器超时未报，则触发电报通知
         ctx.waitUntil(checkOfflineNodes());
 
         return new Response('OK', { status: 200 });
@@ -688,12 +717,13 @@ echo "✅ 探针安装成功！"
 
       const viewId = url.searchParams.get('id');
 
-      // ----------------------------------------
-      // 视图 A：详情页折线图 (增加了延迟折线图)
-      // ----------------------------------------
       if (viewId) {
         const server = await env.DB.prepare('SELECT * FROM servers WHERE id = ?').bind(viewId).first();
         if (!server) return new Response('Server not found', { status: 404 });
+        
+        // 注入到前端让页面知道按什么口径取数据
+        const rxField = sys.auto_reset_traffic === 'true' ? 'monthly_rx' : 'net_rx';
+        const txField = sys.auto_reset_traffic === 'true' ? 'monthly_tx' : 'net_tx';
 
         const detailHtml = `<!DOCTYPE html>
         <html>
@@ -783,7 +813,10 @@ echo "✅ 探针安装成功！"
                 const res = await fetch('/api/server?id=' + serverId); const data = await res.json();
                 const cCode = (data.country || 'xx').toLowerCase();
                 document.getElementById('head-flag').innerHTML = cCode !== 'xx' ? \`<img src="https://flagcdn.com/24x18/\${cCode}.png" alt="\${cCode}" style="vertical-align: middle; margin-right: 8px; border-radius: 2px;">\` : '🏳️ ';
-                document.getElementById('val-uptime').innerText = data.uptime || 'N/A'; document.getElementById('val-arch').innerText = data.arch || 'N/A'; document.getElementById('val-os').innerText = data.os || 'N/A'; document.getElementById('val-cpuinfo').innerText = data.cpu_info || 'N/A'; document.getElementById('val-load').innerText = data.load_avg || '0.00'; document.getElementById('val-boot').innerText = data.boot_time || 'N/A'; document.getElementById('val-traffic').innerText = formatBytes(data.net_tx) + ' / ' + formatBytes(data.net_rx);
+                document.getElementById('val-uptime').innerText = data.uptime || 'N/A'; document.getElementById('val-arch').innerText = data.arch || 'N/A'; document.getElementById('val-os').innerText = data.os || 'N/A'; document.getElementById('val-cpuinfo').innerText = data.cpu_info || 'N/A'; document.getElementById('val-load').innerText = data.load_avg || '0.00'; document.getElementById('val-boot').innerText = data.boot_time || 'N/A'; 
+                // 动态拉取正确统计维度的流量值
+                document.getElementById('val-traffic').innerText = formatBytes(data.${txField} || 0) + ' / ' + formatBytes(data.${rxField} || 0);
+
                 const isOnline = (Date.now() - data.last_updated) < 30000;
                 const badge = document.getElementById('head-status'); badge.innerText = isOnline ? '在线' : '离线'; badge.style.background = isOnline ? '#10b981' : '#ef4444';
                 if(!isOnline) return;
@@ -796,7 +829,6 @@ echo "✅ 探针安装成功！"
 
                 updateChartData(charts.cpu, parseFloat(data.cpu) || 0); updateChartData(charts.ram, parseFloat(data.ram) || 0); updateChartData(charts.proc, parseInt(data.processes) || 0); updateChartData(charts.net, parseFloat(data.net_in_speed) || 0, 0); updateChartData(charts.net, parseFloat(data.net_out_speed) || 0, 1); updateChartData(charts.conn, parseInt(data.tcp_conn) || 0, 0); updateChartData(charts.conn, parseInt(data.udp_conn) || 0, 1);
 
-                // 更新 Ping 延迟图表
                 let p_ct = parseInt(data.ping_ct) || 0; let p_cu = parseInt(data.ping_cu) || 0; let p_cm = parseInt(data.ping_cm) || 0; let p_bd = parseInt(data.ping_bd) || 0;
                 const nowTime = new Date(); const timeLabel = nowTime.getHours() + ':' + String(nowTime.getMinutes()).padStart(2, '0');
                 const labels = charts.ping.data.labels;
@@ -818,7 +850,7 @@ echo "✅ 探针安装成功！"
       }
 
       // ----------------------------------------
-      // 视图 B：全新前台大盘 (带条件渲染和主题控制)
+      // 大盘聚合卡片页
       // ----------------------------------------
       const { results } = await env.DB.prepare('SELECT * FROM servers').all();
       const now = Date.now();
@@ -840,8 +872,13 @@ echo "✅ 探针安装成功！"
           } else {
             globalOffline++;
           }
-          globalNetTx += parseFloat(server.net_tx) || 0;
-          globalNetRx += parseFloat(server.net_rx) || 0;
+          
+          // 根据开关决定取原始值还是月度累计值
+          const rx_val = sys.auto_reset_traffic === 'true' ? parseFloat(server.monthly_rx || 0) : parseFloat(server.net_rx || 0);
+          const tx_val = sys.auto_reset_traffic === 'true' ? parseFloat(server.monthly_tx || 0) : parseFloat(server.net_tx || 0);
+
+          globalNetTx += tx_val;
+          globalNetRx += rx_val;
 
           const grpName = server.server_group || '默认分组';
           if (!groups[grpName]) groups[grpName] = [];
@@ -962,7 +999,7 @@ echo "✅ 探针安装成功！"
           </div>
           <div class="global-stats">
             <div class="g-item"><div class="g-label">服务器总数</div><div class="g-val">${results.length}</div><div class="g-sub">在线 <span style="color:#10b981">${globalOnline}</span> | 离线 <span style="color:#ef4444">${globalOffline}</span></div></div>
-            <div class="g-item"><div class="g-label">总计流量 (入 | 出)</div><div class="g-val">${formatBytes(globalNetRx)} | ${formatBytes(globalNetTx)}</div></div>
+            <div class="g-item"><div class="g-label">总计流量 (入 | 出) ${sys.auto_reset_traffic === 'true' ? '<span style="font-size:10px; color:#c2410c;">(本月)</span>' : ''}</div><div class="g-val">${formatBytes(globalNetRx)} | ${formatBytes(globalNetTx)}</div></div>
             <div class="g-item"><div class="g-label">实时网速 (入 | 出)</div><div class="g-val"><span style="color:#10b981">↓</span> ${formatBytes(globalSpeedIn)}/s | <span style="color:#3b82f6">↑</span> ${formatBytes(globalSpeedOut)}/s</div></div>
           </div>
           ${contentHtml}
