@@ -70,7 +70,18 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+第三创建三网延迟的字段
+
+ALTER TABLE servers ADD COLUMN ping_ct TEXT DEFAULT '0';
+ALTER TABLE servers ADD COLUMN ping_cu TEXT DEFAULT '0';
+ALTER TABLE servers ADD COLUMN ping_cm TEXT DEFAULT '0';
+ALTER TABLE servers ADD COLUMN ping_bd TEXT DEFAULT '0';
+
+
+
 ```
+
 
 ### 第二步：创建并配置 Cloudflare Worker
 1. 在 **Workers & Pages** 中创建一个新的 Worker。
