@@ -113,7 +113,7 @@ export default {
       </div>
     `;
 
-    // 【核心】5种主题差异化 CSS 及 自定义背景透明 CSS
+    // 【核心】5种主题差异化 CSS 及 自定义背景透明 CSS (增加了 ping-box 和 chart-full 样式)
     const themeStyles = `
       /* Theme 1: 默认清爽白 (Classic) 保持原样 */
       
@@ -161,6 +161,10 @@ export default {
       .theme5 .badge-bw { background: #f0f; box-shadow: 0 0 5px #f0f; }
       .theme5 .badge-tf { background: #0ff; color:#000; box-shadow: 0 0 5px #0ff; }
 
+      .ping-box { font-size:11px; margin-top:10px; display:flex; gap:10px; padding: 6px 8px; border-radius: 4px; flex-wrap:wrap; background: rgba(150,150,150,0.1); border: 1px solid rgba(150,150,150,0.2); }
+      .chart-full { grid-column: 1 / -1; }
+      .chart-full canvas { max-height: 250px !important; }
+
       /* 核心功能：如果有自定义背景图，强制启用透明毛玻璃效果 */
       ${sys.custom_bg ? `
         body {
@@ -202,9 +206,9 @@ export default {
           const name = data.name || 'New Server';
           await env.DB.prepare(`
             INSERT INTO servers 
-            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, country, server_group, price, expire_date, bandwidth, traffic_limit, ip_v4, ip_v6) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(id, name, '0', '0', '0', '0', '0', 0, '0', '0', '0', '0', '0', '', '', '', '默认分组', '免费', '', '', '', '0', '0').run();
+            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, country, server_group, price, expire_date, bandwidth, traffic_limit, ip_v4, ip_v6, ping_ct, ping_cu, ping_cm, ping_bd) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(id, name, '0', '0', '0', '0', '0', 0, '0', '0', '0', '0', '0', '', '', '', '默认分组', '免费', '', '', '', '0', '0', '0', '0', '0', '0').run();
           return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
         } 
         else if (data.action === 'delete') {
@@ -423,7 +427,6 @@ export default {
                 show_expire: document.getElementById('cfg_show_expire').checked ? 'true' : 'false',
                 show_bw: document.getElementById('cfg_show_bw').checked ? 'true' : 'false',
                 show_tf: document.getElementById('cfg_show_tf').checked ? 'true' : 'false',
-                // 添加 Telegram 设值的保存
                 tg_notify: document.getElementById('cfg_tg_notify').value,
                 tg_bot_token: document.getElementById('cfg_tg_bot_token').value,
                 tg_chat_id: document.getElementById('cfg_tg_chat_id').value
@@ -475,7 +478,7 @@ export default {
     }
 
     // ==========================================
-    // 3. 一键安装脚本 (/install.sh) 保持不变
+    // 3. 一键安装脚本 (/install.sh) (增加了三网延迟逻辑)
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/install.sh') {
       const sh_bin = "/bin" + "/bash";
@@ -503,6 +506,12 @@ WORKER_URL="$3"
 get_net_bytes() { awk 'NR>2 {rx+=\$2; tx+=\$10} END {printf "%.0f %.0f", rx, tx}' /proc/net/dev; }
 get_cpu_stat() { awk '/^cpu / {print \$2+\$3+\$4+\$5+\$6+\$7+\$8+\$9, \$5+\$6}' /proc/stat; }
 
+CT_NODES=("bj-ct-dualstack.ip.zstaticcdn.com" "sh-ct-dualstack.ip.zstaticcdn.com" "gd-ct-dualstack.ip.zstaticcdn.com")
+CU_NODES=("bj-cu-dualstack.ip.zstaticcdn.com" "sh-cu-dualstack.ip.zstaticcdn.com" "gd-cu-dualstack.ip.zstaticcdn.com")
+CM_NODES=("bj-cm-dualstack.ip.zstaticcdn.com" "sh-cm-dualstack.ip.zstaticcdn.com" "gd-cm-dualstack.ip.zstaticcdn.com")
+
+get_http_ping() { local rtt=\$(curl -o /dev/null -s -m 2 -w "%{time_total}" "http://\$1" 2>/dev/null | awk '{printf "%.0f", \$1*1000}'); echo "\${rtt:-0}"; }
+
 NET_STAT=\$(get_net_bytes)
 RX_PREV=\$(echo \$NET_STAT | awk '{print \$1}')
 TX_PREV=\$(echo \$NET_STAT | awk '{print \$2}')
@@ -515,12 +524,21 @@ PREV_CPU_IDLE=\$(echo \$CPU_STAT | awk '{print \$2}')
 
 LOOP_COUNT=0
 IPV4="0"; IPV6="0"
+PING_CT="0"; PING_CU="0"; PING_CM="0"; PING_BD="0"
 
 while true; do
   if [ \$((LOOP_COUNT % 60)) -eq 0 ]; then
     ${sh_curl} -s -4 -m 3 https://cloudflare.com/cdn-cgi/trace 2>/dev/null | grep -q "ip=" && IPV4="1" || IPV4="0"
     ${sh_curl} -s -6 -m 3 https://cloudflare.com/cdn-cgi/trace 2>/dev/null | grep -q "ip=" && IPV6="1" || IPV6="0"
   fi
+  
+  if [ \$((LOOP_COUNT % 6)) -eq 0 ]; then
+    PING_CT=\$(get_http_ping "\${CT_NODES[\$RANDOM % \${#CT_NODES[@]}]}")
+    PING_CU=\$(get_http_ping "\${CU_NODES[\$RANDOM % \${#CU_NODES[@]}]}")
+    PING_CM=\$(get_http_ping "\${CM_NODES[\$RANDOM % \${#CM_NODES[@]}]}")
+    PING_BD=\$(get_http_ping "lf3-ips.zstaticcdn.com")
+  fi
+  
   LOOP_COUNT=\$((LOOP_COUNT + 1))
 
   OS=\$(awk -F= '/^PRETTY_NAME/{print \$2}' /etc/os-release | tr -d '"')
@@ -569,7 +587,7 @@ while true; do
   TX_SPEED=\$(((TX_NOW - TX_PREV) / 5))
   RX_PREV=\$RX_NOW; TX_PREV=\$TX_NOW
   
-  PAYLOAD="{\\"id\\": \\"\$SERVER_ID\\", \\"secret\\": \\"\$SECRET\\", \\"metrics\\": { \\"cpu\\": \\"\$CPU\\", \\"ram\\": \\"\$RAM\\", \\"ram_total\\": \\"\$RAM_TOTAL\\", \\"ram_used\\": \\"\$RAM_USED\\", \\"swap_total\\": \\"\$SWAP_TOTAL\\", \\"swap_used\\": \\"\$SWAP_USED\\", \\"disk\\": \\"\$DISK\\", \\"disk_total\\": \\"\$DISK_TOTAL\\", \\"disk_used\\": \\"\$DISK_USED\\", \\"load\\": \\"\$LOAD\\", \\"uptime\\": \\"\$UPTIME\\", \\"boot_time\\": \\"\$BOOT_TIME\\", \\"net_rx\\": \\"\$RX_NOW\\", \\"net_tx\\": \\"\$TX_NOW\\", \\"net_in_speed\\": \\"\$RX_SPEED\\", \\"net_out_speed\\": \\"\$TX_SPEED\\", \\"os\\": \\"\$OS\\", \\"arch\\": \\"\$ARCH\\", \\"cpu_info\\": \\"\$CPU_INFO\\", \\"processes\\": \\"\$PROCESSES\\", \\"tcp_conn\\": \\"\$TCP_CONN\\", \\"udp_conn\\": \\"\$UDP_CONN\\", \\"ip_v4\\": \\"\$IPV4\\", \\"ip_v6\\": \\"\$IPV6\\" }}"
+  PAYLOAD="{\\"id\\": \\"\$SERVER_ID\\", \\"secret\\": \\"\$SECRET\\", \\"metrics\\": { \\"cpu\\": \\"\$CPU\\", \\"ram\\": \\"\$RAM\\", \\"ram_total\\": \\"\$RAM_TOTAL\\", \\"ram_used\\": \\"\$RAM_USED\\", \\"swap_total\\": \\"\$SWAP_TOTAL\\", \\"swap_used\\": \\"\$SWAP_USED\\", \\"disk\\": \\"\$DISK\\", \\"disk_total\\": \\"\$DISK_TOTAL\\", \\"disk_used\\": \\"\$DISK_USED\\", \\"load\\": \\"\$LOAD\\", \\"uptime\\": \\"\$UPTIME\\", \\"boot_time\\": \\"\$BOOT_TIME\\", \\"net_rx\\": \\"\$RX_NOW\\", \\"net_tx\\": \\"\$TX_NOW\\", \\"net_in_speed\\": \\"\$RX_SPEED\\", \\"net_out_speed\\": \\"\$TX_SPEED\\", \\"os\\": \\"\$OS\\", \\"arch\\": \\"\$ARCH\\", \\"cpu_info\\": \\"\$CPU_INFO\\", \\"processes\\": \\"\$PROCESSES\\", \\"tcp_conn\\": \\"\$TCP_CONN\\", \\"udp_conn\\": \\"\$UDP_CONN\\", \\"ip_v4\\": \\"\$IPV4\\", \\"ip_v6\\": \\"\$IPV6\\", \\"ping_ct\\": \\"\$PING_CT\\", \\"ping_cu\\": \\"\$PING_CU\\", \\"ping_cm\\": \\"\$PING_CM\\", \\"ping_bd\\": \\"\$PING_BD\\" }}"
   
   ${sh_curl} -s -X POST -H "Content-Type: application/json" -d "\$PAYLOAD" "\$WORKER_URL" > /dev/null
   sleep 5
@@ -602,7 +620,7 @@ echo "✅ 探针安装成功！"
     }
 
     // ==========================================
-    // 4. API 接收数据 (/update)
+    // 4. API 接收数据 (/update) (接收并写入三网延迟)
     // ==========================================
     if (request.method === 'POST' && url.pathname === '/update') {
       try {
@@ -623,7 +641,7 @@ echo "✅ 探针安装成功！"
               ram_total = ?, net_rx = ?, net_tx = ?, net_in_speed = ?, net_out_speed = ?,
               os = ?, cpu_info = ?, arch = ?, boot_time = ?, ram_used = ?, swap_total = ?, 
               swap_used = ?, disk_total = ?, disk_used = ?, processes = ?, tcp_conn = ?, udp_conn = ?, 
-              country = ?, ip_v4 = ?, ip_v6 = ?
+              country = ?, ip_v4 = ?, ip_v6 = ?, ping_ct = ?, ping_cu = ?, ping_cm = ?, ping_bd = ?
           WHERE id = ?
         `).bind(
           metrics.cpu, metrics.ram, metrics.disk, metrics.load, metrics.uptime, Date.now(),
@@ -633,7 +651,9 @@ echo "✅ 探针安装成功！"
           metrics.ram_used || '0', metrics.swap_total || '0', metrics.swap_used || '0',
           metrics.disk_total || '0', metrics.disk_used || '0', metrics.processes || '0',
           metrics.tcp_conn || '0', metrics.udp_conn || '0', countryCode, 
-          metrics.ip_v4 || '0', metrics.ip_v6 || '0', id
+          metrics.ip_v4 || '0', metrics.ip_v6 || '0', 
+          metrics.ping_ct || '0', metrics.ping_cu || '0', metrics.ping_cm || '0', metrics.ping_bd || '0', 
+          id
         ).run();
 
         // 关键新增：在正常上报后触发检查逻辑，如果此时有别的机器超时未报，则触发电报通知
@@ -669,7 +689,7 @@ echo "✅ 探针安装成功！"
       const viewId = url.searchParams.get('id');
 
       // ----------------------------------------
-      // 视图 A：详情页折线图
+      // 视图 A：详情页折线图 (增加了延迟折线图)
       // ----------------------------------------
       if (viewId) {
         const server = await env.DB.prepare('SELECT * FROM servers WHERE id = ?').bind(viewId).first();
@@ -727,6 +747,11 @@ echo "✅ 探针安装成功！"
               <div class="chart-card"><h3>进程数 <span class="chart-val" id="text-proc">0</span></h3><canvas id="chartProc"></canvas></div>
               <div class="chart-card"><h3>网络速度 <span class="chart-val" style="font-size:14px;"><span style="color:#10b981">↓</span> <span id="text-net-in">0</span> | <span style="color:#3b82f6">↑</span> <span id="text-net-out">0</span></span></h3><canvas id="chartNet"></canvas></div>
               <div class="chart-card"><h3>TCP / UDP <span class="chart-val" style="font-size:14px;">TCP <span id="text-tcp">0</span> | UDP <span id="text-udp">0</span></span></h3><canvas id="chartConn"></canvas></div>
+              
+              <div class="chart-card chart-full">
+                <h3>国内延迟追踪 <span class="chart-val" style="font-size:12px; font-weight:normal;">电信 <b id="t-ct">0</b> | 联通 <b id="t-cu">0</b> | 移动 <b id="t-cm">0</b> | 字节 <b id="t-bd">0</b></span></h3>
+                <canvas id="chartPing"></canvas>
+              </div>
             </div>
             ${footerHtml}
           </div>
@@ -738,6 +763,19 @@ echo "✅ 探针安装成功！"
             const charts = { cpu: createChart('chartCPU', '#3b82f6', 'rgba(59, 130, 246, 0.1)'), ram: createChart('chartRAM', '#8b5cf6', 'rgba(139, 92, 246, 0.1)'), proc: createChart('chartProc', '#ec4899', 'rgba(236, 72, 153, 0.1)') };
             const ctxNet = document.getElementById('chartNet').getContext('2d'); charts.net = new Chart(ctxNet, { type: 'line', data: { labels: Array(30).fill(''), datasets: [ { label: 'In', data: Array(30).fill(0), borderColor: '#10b981', borderWidth: 2, tension: 0.4, pointRadius: 0 }, { label: 'Out', data: Array(30).fill(0), borderColor: '#3b82f6', borderWidth: 2, tension: 0.4, pointRadius: 0 } ]}, options: commonOptions });
             const ctxConn = document.getElementById('chartConn').getContext('2d'); charts.conn = new Chart(ctxConn, { type: 'line', data: { labels: Array(30).fill(''), datasets: [ { label: 'TCP', data: Array(30).fill(0), borderColor: '#6366f1', borderWidth: 2, tension: 0.4, pointRadius: 0 }, { label: 'UDP', data: Array(30).fill(0), borderColor: '#d946ef', borderWidth: 2, tension: 0.4, pointRadius: 0 } ]}, options: commonOptions });
+            
+            const pingOptions = { 
+                responsive: true, maintainAspectRatio: false, animation: { duration: 0 }, 
+                scales: { x: { display: true, ticks: { maxTicksLimit: 15, color: '#9ca3af', font: { size: 10 } } }, y: { beginAtZero: true, border: { display: false } } }, 
+                plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } }, tooltip: { enabled: true, mode: 'index', intersect: false } }, 
+                elements: { point: { radius: 0, hitRadius: 10, hoverRadius: 4 }, line: { tension: 0.3, borderWidth: 2 } } 
+            };
+            charts.ping = new Chart(document.getElementById('chartPing').getContext('2d'), { 
+                type: 'line', 
+                data: { labels: [], datasets: [ { label: '电信', data: [], borderColor: '#10b981', backgroundColor: 'transparent' }, { label: '联通', data: [], borderColor: '#f59e0b', backgroundColor: 'transparent' }, { label: '移动', data: [], borderColor: '#3b82f6', backgroundColor: 'transparent' }, { label: '字节', data: [], borderColor: '#8b5cf6', backgroundColor: 'transparent' } ] }, 
+                options: pingOptions 
+            });
+
             const updateChartData = (chart, newData, datasetIndex = 0) => { const dataArr = chart.data.datasets[datasetIndex].data; dataArr.push(newData); dataArr.shift(); chart.update(); };
 
             async function fetchData() {
@@ -749,10 +787,27 @@ echo "✅ 探针安装成功！"
                 const isOnline = (Date.now() - data.last_updated) < 30000;
                 const badge = document.getElementById('head-status'); badge.innerText = isOnline ? '在线' : '离线'; badge.style.background = isOnline ? '#10b981' : '#ef4444';
                 if(!isOnline) return;
+                
                 document.getElementById('text-cpu').innerText = data.cpu + '%'; document.getElementById('text-ram').innerText = data.ram + '%'; document.getElementById('text-swap').innerText = 'Swap: ' + data.swap_used + ' MiB / ' + data.swap_total + ' MiB'; document.getElementById('text-proc').innerText = data.processes || '0'; document.getElementById('text-net-in').innerText = formatBytes(data.net_in_speed) + '/s'; document.getElementById('text-net-out').innerText = formatBytes(data.net_out_speed) + '/s'; document.getElementById('text-tcp').innerText = data.tcp_conn || '0'; document.getElementById('text-udp').innerText = data.udp_conn || '0';
                 let diskTotal = parseFloat(data.disk_total) || 0; let diskUsed = parseFloat(data.disk_used) || 0; let diskPct = parseInt(data.disk) || 0;
                 document.getElementById('text-disk').innerText = diskPct + '%'; document.getElementById('disk-bar').style.width = diskPct + '%'; document.getElementById('text-disk-detail').innerText = (diskUsed/1024).toFixed(2) + ' GiB / ' + (diskTotal/1024).toFixed(2) + ' GiB';
+                
+                document.getElementById('t-ct').innerText = data.ping_ct + 'ms'; document.getElementById('t-cu').innerText = data.ping_cu + 'ms'; document.getElementById('t-cm').innerText = data.ping_cm + 'ms'; document.getElementById('t-bd').innerText = data.ping_bd + 'ms';
+
                 updateChartData(charts.cpu, parseFloat(data.cpu) || 0); updateChartData(charts.ram, parseFloat(data.ram) || 0); updateChartData(charts.proc, parseInt(data.processes) || 0); updateChartData(charts.net, parseFloat(data.net_in_speed) || 0, 0); updateChartData(charts.net, parseFloat(data.net_out_speed) || 0, 1); updateChartData(charts.conn, parseInt(data.tcp_conn) || 0, 0); updateChartData(charts.conn, parseInt(data.udp_conn) || 0, 1);
+
+                // 更新 Ping 延迟图表
+                let p_ct = parseInt(data.ping_ct) || 0; let p_cu = parseInt(data.ping_cu) || 0; let p_cm = parseInt(data.ping_cm) || 0; let p_bd = parseInt(data.ping_bd) || 0;
+                const nowTime = new Date(); const timeLabel = nowTime.getHours() + ':' + String(nowTime.getMinutes()).padStart(2, '0');
+                const labels = charts.ping.data.labels;
+                if(labels.length > 0 && labels[labels.length - 1] === timeLabel) {
+                     const lastIdx = labels.length - 1; charts.ping.data.datasets[0].data[lastIdx] = p_ct; charts.ping.data.datasets[1].data[lastIdx] = p_cu; charts.ping.data.datasets[2].data[lastIdx] = p_cm; charts.ping.data.datasets[3].data[lastIdx] = p_bd;
+                } else {
+                     charts.ping.data.labels.push(timeLabel); charts.ping.data.datasets[0].data.push(p_ct); charts.ping.data.datasets[1].data.push(p_cu); charts.ping.data.datasets[2].data.push(p_cm); charts.ping.data.datasets[3].data.push(p_bd);
+                     if(charts.ping.data.labels.length > 60) { charts.ping.data.labels.shift(); charts.ping.data.datasets.forEach(d => d.data.shift()); }
+                }
+                charts.ping.update();
+
               } catch (e) {}
             }
             setInterval(fetchData, 3000); fetchData();
@@ -772,6 +827,8 @@ echo "✅ 探针安装成功！"
       let globalSpeedIn = 0; let globalSpeedOut = 0;
       let globalNetTx = 0; let globalNetRx = 0;
       const groups = {};
+
+      const getColor = (ping) => { const p = parseInt(ping); if (p === 0 || isNaN(p)) return '#9ca3af'; if (p < 100) return '#10b981'; if (p < 200) return '#f59e0b'; return '#ef4444'; };
 
       if (results && results.length > 0) {
         for (const server of results) {
@@ -830,6 +887,8 @@ echo "✅ 探针安装成功！"
             if (server.ip_v4 === '1') badgesHtml += `<span class="badge badge-v4">IPv4</span>`;
             if (server.ip_v6 === '1') badgesHtml += `<span class="badge badge-v6">IPv6</span>`;
 
+            const pingHtml = `<div class="ping-box"><span>电信 <span style="color:${getColor(server.ping_ct)}; font-weight:bold;">${server.ping_ct === '0' ? '超时' : server.ping_ct + 'ms'}</span></span><span>联通 <span style="color:${getColor(server.ping_cu)}; font-weight:bold;">${server.ping_cu === '0' ? '超时' : server.ping_cu + 'ms'}</span></span><span>移动 <span style="color:${getColor(server.ping_cm)}; font-weight:bold;">${server.ping_cm === '0' ? '超时' : server.ping_cm + 'ms'}</span></span><span>字节 <span style="color:${getColor(server.ping_bd)}; font-weight:bold;">${server.ping_bd === '0' ? '超时' : server.ping_bd + 'ms'}</span></span></div>`;
+
             contentHtml += `
               <a href="/?id=${server.id}" class="vps-card">
                 <div class="card-left">
@@ -839,6 +898,7 @@ echo "✅ 探针安装成功！"
                   </div>
                   ${metaHtml}
                   <div class="card-badges">${badgesHtml}</div>
+                  ${pingHtml}
                 </div>
                 
                 <div class="card-right">
