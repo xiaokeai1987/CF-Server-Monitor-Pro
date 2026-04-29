@@ -3,6 +3,53 @@ export default {
     const url = new URL(request.url);
     const host = url.origin;
 
+    // ==========================================
+    // 0. 数据库自动化热创建与无缝升级 (Auto Migration)
+    // ==========================================
+    // 利用 globalThis 确保每个 Worker 实例生命周期内只检查一次，节省 D1 免费读取额度
+    if (!globalThis.dbInitialized) {
+      try {
+        // 1. 确保设置表存在
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`).run();
+        
+        // 2. 确保服务器表(基础结构)存在
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS servers (
+            id TEXT PRIMARY KEY,
+            name TEXT, cpu TEXT, ram TEXT, disk TEXT, load_avg TEXT, uptime TEXT, last_updated INTEGER,
+            ram_total TEXT, net_rx TEXT, net_tx TEXT, net_in_speed TEXT, net_out_speed TEXT,
+            os TEXT, cpu_info TEXT, arch TEXT, boot_time TEXT, ram_used TEXT, swap_total TEXT, 
+            swap_used TEXT, disk_total TEXT, disk_used TEXT, processes TEXT, tcp_conn TEXT, udp_conn TEXT, 
+            country TEXT, ip_v4 TEXT, ip_v6 TEXT,
+            server_group TEXT DEFAULT '默认分组', price TEXT DEFAULT '', expire_date TEXT DEFAULT '', 
+            bandwidth TEXT DEFAULT '', traffic_limit TEXT DEFAULT ''
+          )
+        `).run();
+
+        // 3. 动态检测并追加新字段 (兼容老用户升级和新用户直接安装)
+        const { results: columns } = await env.DB.prepare(`PRAGMA table_info(servers)`).all();
+        const existingCols = columns.map(c => c.name);
+        
+        // 需要确保存在的增强功能字段
+        const newCols = {
+          ping_ct: "TEXT DEFAULT '0'", ping_cu: "TEXT DEFAULT '0'", ping_cm: "TEXT DEFAULT '0'", ping_bd: "TEXT DEFAULT '0'",
+          monthly_rx: "TEXT DEFAULT '0'", monthly_tx: "TEXT DEFAULT '0'", last_rx: "TEXT DEFAULT '0'", last_tx: "TEXT DEFAULT '0'", reset_month: "TEXT DEFAULT ''"
+        };
+
+        // 遍历比对，缺少的自动 ALTER TABLE 追加
+        for (const [colName, colDef] of Object.entries(newCols)) {
+          if (!existingCols.includes(colName)) {
+            await env.DB.prepare(`ALTER TABLE servers ADD COLUMN ${colName} ${colDef}`).run();
+            console.log(`✅ 自动追加字段: ${colName}`);
+          }
+        }
+        
+        globalThis.dbInitialized = true;
+      } catch (e) {
+        console.error("❌ 数据库自动初始化失败:", e);
+      }
+    }
+
     const formatBytes = (bytes) => {
       const b = parseInt(bytes);
       if (isNaN(b) || b === 0) return '0 B';
@@ -18,7 +65,7 @@ export default {
     };
 
     // ==========================================
-    // 0. 认证机制与全局设置加载
+    // 1. 认证机制与全局设置加载
     // ==========================================
     const checkAuth = (req) => {
       const authHeader = req.headers.get('Authorization');
@@ -35,7 +82,6 @@ export default {
       headers: { 'WWW-Authenticate': `Basic realm="${realmTitle}"` }
     });
 
-    // 默认全局设置 (新增了 auto_reset_traffic)
     let sys = {
       site_title: '⚡ Server Monitor Pro',
       admin_title: '⚙️ 探针管理后台',
@@ -49,7 +95,7 @@ export default {
       tg_notify: 'false',
       tg_bot_token: '',
       tg_chat_id: '',
-      auto_reset_traffic: 'false' // 新增：是否开启每月1号重置流量
+      auto_reset_traffic: 'false'
     };
 
     try {
@@ -169,7 +215,7 @@ export default {
     `;
 
     // ==========================================
-    // 1. 后台管理 API
+    // 后台管理 API (/admin/api)
     // ==========================================
     if (request.method === 'POST' && url.pathname === '/admin/api') {
       if (!checkAuth(request)) return authResponse(sys.admin_title);
@@ -187,9 +233,9 @@ export default {
           const name = data.name || 'New Server';
           await env.DB.prepare(`
             INSERT INTO servers 
-            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, country, server_group, price, expire_date, bandwidth, traffic_limit, ip_v4, ip_v6, ping_ct, ping_cu, ping_cm, ping_bd, monthly_rx, monthly_tx, last_rx, last_tx, reset_month) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', '0', '0', '0', '')
-          `).bind(id, name, '0', '0', '0', '0', '0', 0, '0', '0', '0', '0', '0', '', '', '', '默认分组', '免费', '', '', '', '0', '0', '0', '0', '0', '0').run();
+            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, arch, boot_time, ram_used, swap_total, swap_used, disk_total, disk_used, processes, tcp_conn, udp_conn, country, ip_v4, ip_v6, server_group, price, expire_date, bandwidth, traffic_limit, ping_ct, ping_cu, ping_cm, ping_bd, monthly_rx, monthly_tx, last_rx, last_tx, reset_month) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(id, name, '0', '0', '0', '0', '0', 0, '0', '0', '0', '0', '0', '', '', '', '', '0', '0', '0', '0', '0', '0', '0', '0', '', '0', '0', '默认分组', '免费', '', '', '', '0', '0', '0', '0', '0', '0', '0', '0', '').run();
           return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
         } 
         else if (data.action === 'delete') {
@@ -208,7 +254,7 @@ export default {
     }
 
     // ==========================================
-    // 2. 后台管理 UI (/admin)
+    // 后台管理 UI (/admin)
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/admin') {
       if (!checkAuth(request)) return authResponse(sys.admin_title);
@@ -465,7 +511,7 @@ export default {
     }
 
     // ==========================================
-    // 3. 一键安装脚本 (/install.sh)
+    // 一键安装脚本 (/install.sh)
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/install.sh') {
       const sh_bin = "/bin" + "/bash";
@@ -607,7 +653,7 @@ echo "✅ 探针安装成功！"
     }
 
     // ==========================================
-    // 4. API 接收数据 (/update) (核心流量累加与重置逻辑)
+    // API 接收数据 (/update) (核心流量累加与重置逻辑)
     // ==========================================
     if (request.method === 'POST' && url.pathname === '/update') {
       try {
@@ -622,11 +668,9 @@ echo "✅ 探针安装成功！"
         const serverExists = await env.DB.prepare('SELECT * FROM servers WHERE id = ?').bind(id).first();
         if (!serverExists) return new Response('Server not found', { status: 404 });
 
-        // ----------------------------------------
         // 流量累加与每月重置判定逻辑
-        // ----------------------------------------
         const nowTime = new Date();
-        const tzOffset = 8 * 60 * 60000; // 使用东八区时间判断月份
+        const tzOffset = 8 * 60 * 60000; 
         const localNow = new Date(nowTime.getTime() + tzOffset);
         const currentMonthStr = `${localNow.getFullYear()}-${localNow.getMonth() + 1}`;
         
@@ -636,7 +680,6 @@ echo "✅ 探针安装成功！"
         let last_tx = parseFloat(serverExists.last_tx || '0');
         let reset_month = serverExists.reset_month || currentMonthStr;
 
-        // 如果启用了自动重置，且到了新自然月，进行清零
         if (sys.auto_reset_traffic === 'true' && currentMonthStr !== reset_month) {
             monthly_rx = 0;
             monthly_tx = 0;
@@ -646,11 +689,9 @@ echo "✅ 探针安装成功！"
         const current_rx = parseFloat(metrics.net_rx || '0');
         const current_tx = parseFloat(metrics.net_tx || '0');
 
-        // 计算差值累加 (防 VPS 重启导致的清零)
         if (current_rx >= last_rx) {
             monthly_rx += (current_rx - last_rx);
         } else {
-            // 如果 current < last，说明 VPS 重启过，直接加上当前值
             monthly_rx += current_rx;
         }
 
@@ -695,7 +736,7 @@ echo "✅ 探针安装成功！"
     }
 
     // ==========================================
-    // 5. 单个服务器详情 JSON API
+    // 单个服务器详情 JSON API
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/api/server') {
       if (sys.is_public !== 'true' && !checkAuth(request)) return authResponse(sys.site_title);
@@ -708,7 +749,7 @@ echo "✅ 探针安装成功！"
     }
 
     // ==========================================
-    // 6. 前台探针首页 & 详情页 (/ )
+    // 前台探针首页 & 详情页 (/ )
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/') {
       if (sys.is_public !== 'true' && !checkAuth(request)) {
@@ -721,7 +762,6 @@ echo "✅ 探针安装成功！"
         const server = await env.DB.prepare('SELECT * FROM servers WHERE id = ?').bind(viewId).first();
         if (!server) return new Response('Server not found', { status: 404 });
         
-        // 注入到前端让页面知道按什么口径取数据
         const rxField = sys.auto_reset_traffic === 'true' ? 'monthly_rx' : 'net_rx';
         const txField = sys.auto_reset_traffic === 'true' ? 'monthly_tx' : 'net_tx';
 
@@ -814,7 +854,7 @@ echo "✅ 探针安装成功！"
                 const cCode = (data.country || 'xx').toLowerCase();
                 document.getElementById('head-flag').innerHTML = cCode !== 'xx' ? \`<img src="https://flagcdn.com/24x18/\${cCode}.png" alt="\${cCode}" style="vertical-align: middle; margin-right: 8px; border-radius: 2px;">\` : '🏳️ ';
                 document.getElementById('val-uptime').innerText = data.uptime || 'N/A'; document.getElementById('val-arch').innerText = data.arch || 'N/A'; document.getElementById('val-os').innerText = data.os || 'N/A'; document.getElementById('val-cpuinfo').innerText = data.cpu_info || 'N/A'; document.getElementById('val-load').innerText = data.load_avg || '0.00'; document.getElementById('val-boot').innerText = data.boot_time || 'N/A'; 
-                // 动态拉取正确统计维度的流量值
+                
                 document.getElementById('val-traffic').innerText = formatBytes(data.${txField} || 0) + ' / ' + formatBytes(data.${rxField} || 0);
 
                 const isOnline = (Date.now() - data.last_updated) < 30000;
@@ -873,7 +913,6 @@ echo "✅ 探针安装成功！"
             globalOffline++;
           }
           
-          // 根据开关决定取原始值还是月度累计值
           const rx_val = sys.auto_reset_traffic === 'true' ? parseFloat(server.monthly_rx || 0) : parseFloat(server.net_rx || 0);
           const tx_val = sys.auto_reset_traffic === 'true' ? parseFloat(server.monthly_tx || 0) : parseFloat(server.net_tx || 0);
 
