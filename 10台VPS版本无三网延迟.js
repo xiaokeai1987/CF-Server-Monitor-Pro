@@ -3,6 +3,53 @@ export default {
     const url = new URL(request.url);
     const host = url.origin;
 
+    // ==========================================
+    // 0. 数据库自动化热创建与无缝升级 (Auto Migration)
+    // ==========================================
+    // 利用 globalThis 确保每个 Worker 实例生命周期内只检查一次，节省 D1 免费读取额度
+    if (!globalThis.dbInitialized) {
+      try {
+        // 1. 确保设置表存在
+        await env.DB.prepare(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`).run();
+        
+        // 2. 确保服务器表(基础结构)存在
+        await env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS servers (
+            id TEXT PRIMARY KEY,
+            name TEXT, cpu TEXT, ram TEXT, disk TEXT, load_avg TEXT, uptime TEXT, last_updated INTEGER,
+            ram_total TEXT, net_rx TEXT, net_tx TEXT, net_in_speed TEXT, net_out_speed TEXT,
+            os TEXT, cpu_info TEXT, arch TEXT, boot_time TEXT, ram_used TEXT, swap_total TEXT, 
+            swap_used TEXT, disk_total TEXT, disk_used TEXT, processes TEXT, tcp_conn TEXT, udp_conn TEXT, 
+            country TEXT, ip_v4 TEXT, ip_v6 TEXT,
+            server_group TEXT DEFAULT '默认分组', price TEXT DEFAULT '', expire_date TEXT DEFAULT '', 
+            bandwidth TEXT DEFAULT '', traffic_limit TEXT DEFAULT ''
+          )
+        `).run();
+
+        // 3. 动态检测并追加新字段 (兼容老用户升级和新用户直接安装)
+        const { results: columns } = await env.DB.prepare(`PRAGMA table_info(servers)`).all();
+        const existingCols = columns.map(c => c.name);
+        
+        // 需要确保存在的增强功能字段
+        const newCols = {
+          ping_ct: "TEXT DEFAULT '0'", ping_cu: "TEXT DEFAULT '0'", ping_cm: "TEXT DEFAULT '0'", ping_bd: "TEXT DEFAULT '0'",
+          monthly_rx: "TEXT DEFAULT '0'", monthly_tx: "TEXT DEFAULT '0'", last_rx: "TEXT DEFAULT '0'", last_tx: "TEXT DEFAULT '0'", reset_month: "TEXT DEFAULT ''"
+        };
+
+        // 遍历比对，缺少的自动 ALTER TABLE 追加
+        for (const [colName, colDef] of Object.entries(newCols)) {
+          if (!existingCols.includes(colName)) {
+            await env.DB.prepare(`ALTER TABLE servers ADD COLUMN ${colName} ${colDef}`).run();
+            console.log(`✅ 自动追加字段: ${colName}`);
+          }
+        }
+        
+        globalThis.dbInitialized = true;
+      } catch (e) {
+        console.error("❌ 数据库自动初始化失败:", e);
+      }
+    }
+
     const formatBytes = (bytes) => {
       const b = parseInt(bytes);
       if (isNaN(b) || b === 0) return '0 B';
@@ -18,7 +65,7 @@ export default {
     };
 
     // ==========================================
-    // 0. 认证机制与全局设置加载
+    // 1. 认证机制与全局设置加载
     // ==========================================
     const checkAuth = (req) => {
       const authHeader = req.headers.get('Authorization');
@@ -47,7 +94,8 @@ export default {
       show_tf: 'true',
       tg_notify: 'false',
       tg_bot_token: '',
-      tg_chat_id: ''
+      tg_chat_id: '',
+      auto_reset_traffic: 'false'
     };
 
     try {
@@ -152,6 +200,10 @@ export default {
       .theme5 .badge-bw { background: #f0f; box-shadow: 0 0 5px #f0f; }
       .theme5 .badge-tf { background: #0ff; color:#000; box-shadow: 0 0 5px #0ff; }
 
+      .ping-box { font-size:11px; margin-top:10px; display:flex; gap:10px; padding: 6px 8px; border-radius: 4px; flex-wrap:wrap; background: rgba(150,150,150,0.1); border: 1px solid rgba(150,150,150,0.2); }
+      .chart-full { grid-column: 1 / -1; }
+      .chart-full canvas { max-height: 250px !important; }
+
       ${sys.custom_bg ? `
         body {
           background: url('${sys.custom_bg}') no-repeat center center fixed !important;
@@ -174,7 +226,7 @@ export default {
     `;
 
     // ==========================================
-    // 1. 后台管理 API
+    // 后台管理 API (/admin/api)
     // ==========================================
     if (request.method === 'POST' && url.pathname === '/admin/api') {
       if (!checkAuth(request)) return authResponse(sys.admin_title);
@@ -192,9 +244,9 @@ export default {
           const name = data.name || 'New Server';
           await env.DB.prepare(`
             INSERT INTO servers 
-            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, country, server_group, price, expire_date, bandwidth, traffic_limit, ip_v4, ip_v6) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(id, name, '0', '0', '0', '0', '0', 0, '0', '0', '0', '0', '0', '', '', '', '默认分组', '免费', '', '', '', '0', '0').run();
+            (id, name, cpu, ram, disk, load_avg, uptime, last_updated, ram_total, net_rx, net_tx, net_in_speed, net_out_speed, os, cpu_info, arch, boot_time, ram_used, swap_total, swap_used, disk_total, disk_used, processes, tcp_conn, udp_conn, country, ip_v4, ip_v6, server_group, price, expire_date, bandwidth, traffic_limit, ping_ct, ping_cu, ping_cm, ping_bd, monthly_rx, monthly_tx, last_rx, last_tx, reset_month) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(id, name, '0', '0', '0', '0', '0', 0, '0', '0', '0', '0', '0', '', '', '', '', '0', '0', '0', '0', '0', '0', '0', '0', '', '0', '0', '默认分组', '免费', '', '', '', '0', '0', '0', '0', '0', '0', '0', '0', '').run();
           return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
         } 
         else if (data.action === 'delete') {
@@ -213,7 +265,7 @@ export default {
     }
 
     // ==========================================
-    // 2. 后台管理 UI (/admin)
+    // 后台管理 UI (/admin)
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/admin') {
       if (!checkAuth(request)) return authResponse(sys.admin_title);
@@ -289,13 +341,14 @@ export default {
                 </select>
               </div>
               <div class="form-group">
-                <label>🖼️ 自定义背景图片</label>
+                <label>🖼️ 自定义背景图片 (上传或填URL，开启后强制全透明)</label>
                 <div style="display:flex; gap:8px;">
                    <input type="text" id="cfg_custom_bg" value="${sys.custom_bg || ''}" placeholder="粘贴图片 URL 或 点击右侧按钮上传" style="flex:1;">
                    <input type="file" id="bg_file" accept="image/*" style="display:none;" onchange="uploadBg(this)">
                    <button class="btn btn-gray" onclick="document.getElementById('bg_file').click()">📁 本地上传</button>
                 </div>
                 <img id="bg_preview" src="${sys.custom_bg || ''}" style="max-height: 120px; margin-top: 10px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: ${sys.custom_bg ? 'block' : 'none'}; object-fit: cover;">
+                <span style="font-size:12px; color:#888; margin-top:5px;">* 上传的图片会自动转码保存，建议小于 500KB 以保证加载速度。清除输入框并保存即可恢复纯色主题。</span>
               </div>
               <div class="form-group">
                 <label>前台看板标题</label>
@@ -308,6 +361,12 @@ export default {
             </div>
             <div>
               <label style="font-size: 14px; font-weight: 600; margin-bottom: 10px; display: block; color: #555;">👁️ 前台展示控制</label>
+              
+              <div class="checkbox-group" style="background:#fefce8; padding:8px; border-radius:6px; border:1px solid #fef08a; margin-bottom:15px;">
+                <input type="checkbox" id="cfg_auto_reset_traffic" ${sys.auto_reset_traffic === 'true' ? 'checked' : ''}>
+                <label for="cfg_auto_reset_traffic"><b>启用每月1号重置流量</b><br><span style="font-size:12px;color:#854d0e;font-weight:normal;">开启后大盘将计算自然月累计流量，且重启机器不会清零</span></label>
+              </div>
+
               <div class="checkbox-group">
                 <input type="checkbox" id="cfg_is_public" ${sys.is_public === 'true' ? 'checked' : ''}>
                 <label for="cfg_is_public"><b>公开访问</b> (取消勾选后，访客必须输入密码才能查看探针)</label>
@@ -408,6 +467,7 @@ export default {
                 site_title: document.getElementById('cfg_site_title').value,
                 admin_title: document.getElementById('cfg_admin_title').value,
                 is_public: document.getElementById('cfg_is_public').checked ? 'true' : 'false',
+                auto_reset_traffic: document.getElementById('cfg_auto_reset_traffic').checked ? 'true' : 'false',
                 show_price: document.getElementById('cfg_show_price').checked ? 'true' : 'false',
                 show_expire: document.getElementById('cfg_show_expire').checked ? 'true' : 'false',
                 show_bw: document.getElementById('cfg_show_bw').checked ? 'true' : 'false',
@@ -463,7 +523,7 @@ export default {
     }
 
     // ==========================================
-    // 3. 一键安装脚本 (/install.sh)
+    // 一键安装脚本 (/install.sh)
     // ==========================================
     if (request.method === 'GET' && url.pathname === '/install.sh') {
       const sh_bin = "/bin" + "/bash";
@@ -917,3 +977,14 @@ echo "✅ 探针安装成功！"
     return new Response('Not Found', { status: 404 });
   }
 };
+
+
+如果这部分代码在探针上报时候没有带三网延迟，也就是老版本一键脚本的数据，你目前的代码会把所有上报的值当做零然后覆盖掉原来三网延迟的值，这不对，需要做成如果没有带这些参数就不更新数据库相关字段的值才对。包括月统计流量如果在旧探针没有上报rx，那就不做处理，你现在代码把旧探针没上报也当做零处理这不对的，重新完善/update 接口。
+
+
+另外安装脚本中，如果有些机器没有ipv6。用curl -s -6 是获取不到值的会导致脚本报错卡死，这需要处理下。最好给curl 加个几秒的超时避免机器卡死
+
+还有就是三网延迟的脚本也加超时，避免节点连不上某个测速节点而卡死
+
+
+修改这几处然后把完整代码发给我
