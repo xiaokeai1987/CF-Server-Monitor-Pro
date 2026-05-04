@@ -145,6 +145,7 @@ export default {
       </div>
     `;
 
+    // 视图切换和表格相关样式增强
     const themeStyles = `
       body.theme2 { background-color: #0d1117; color: #c9d1d9; }
       .theme2 .vps-card, .theme2 .global-stats, .theme2 .header-card, .theme2 .chart-card { background: #161b22; color: #c9d1d9; box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: 1px solid #30363d; }
@@ -155,6 +156,16 @@ export default {
       .theme2 .stat-bar { background: #21262d; }
       .theme2 .divider { background: #30363d; }
       .theme2 .card-title { color: #fff; }
+      /* 暗色模式下的表格与按钮 */
+      .theme2 .view-controls { background: #0d1117; border: 1px solid #30363d; }
+      .theme2 .toggle-btn { color: #8b949e; }
+      .theme2 .toggle-btn:hover { color: #c9d1d9; }
+      .theme2 .toggle-btn.active { background: #21262d; color: #58a6ff; border: 1px solid #30363d; }
+      .theme2 .custom-table { background: #161b22; color: #c9d1d9; border: 1px solid #30363d; box-shadow: none; }
+      .theme2 .custom-table th { background: #0d1117; color: #8b949e; border-bottom-color: #30363d; }
+      .theme2 .custom-table td { border-bottom-color: #30363d; }
+      .theme2 .custom-table tr:hover { background: #21262d; }
+      .theme2 .filter-tag { background: #161b22; color: #c9d1d9; border-color: #30363d; }
 
       body.theme3 { background-color: #fef08a; color: #000; font-weight: 500; }
       .theme3 .vps-card, .theme3 .global-stats, .theme3 .header-card, .theme3 .chart-card { background: #fff; border: 3px solid #000; border-radius: 0; box-shadow: 6px 6px 0px #000; transition: transform 0.1s, box-shadow 0.1s; }
@@ -164,6 +175,7 @@ export default {
       .theme3 .stat-bar > div { border-right: 1px solid #000; }
       .theme3 .badge { border: 1px solid #000; border-radius: 0; }
       .theme3 .stat-val, .theme3 .g-val, .theme3 .card-title { font-weight: 900; color: #000; }
+      .theme3 .custom-table, .theme3 .filter-tag { background: #fff; border: 3px solid #000; border-radius: 0; box-shadow: 6px 6px 0px #000; }
 
       body.theme4 { background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%); background-attachment: fixed; color: #fff; }
       .theme4 .vps-card, .theme4 .global-stats, .theme4 .header-card, .theme4 .chart-card { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); color: #fff; }
@@ -173,6 +185,9 @@ export default {
       .theme4 .stat-label, .theme4 .g-label, .theme4 .g-sub, .theme4 .card-meta { color: rgba(255,255,255,0.8); }
       .theme4 .stat-bar { background: rgba(0,0,0,0.2); }
       .theme4 .divider { background: rgba(255,255,255,0.2); }
+      .theme4 .custom-table, .theme4 .filter-tag { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1); color: #fff; }
+      .theme4 .custom-table th, .theme4 .custom-table tr:hover { background: rgba(0,0,0,0.1); color:#fff;}
+      .theme4 .os-text { color: #eee; }
 
       body.theme5 { background-color: #050505; color: #0ff; font-family: 'Courier New', Courier, monospace; }
       .theme5 .vps-card, .theme5 .global-stats, .theme5 .header-card, .theme5 .chart-card { background: #0b0c10; border: 1px solid #f0f; border-radius: 0; box-shadow: 0 0 10px rgba(255, 0, 255, 0.2); color: #fff; }
@@ -185,6 +200,10 @@ export default {
       .theme5 .divider { background: #333; }
       .theme5 .badge-bw { background: #f0f; box-shadow: 0 0 5px #f0f; }
       .theme5 .badge-tf { background: #0ff; color:#000; box-shadow: 0 0 5px #0ff; }
+      .theme5 .custom-table, .theme5 .filter-tag { background: #0b0c10; border: 1px solid #f0f; border-radius: 0; box-shadow: 0 0 10px rgba(255, 0, 255, 0.2); color: #fff; }
+      .theme5 .custom-table th { background: #111; color: #f0f; border-color: #333; }
+      .theme5 .custom-table td { border-color: #333; }
+      .theme5 .custom-table tr:hover { background: #222; }
 
       .ping-box { font-size:11px; margin-top:10px; display:flex; gap:10px; padding: 6px 8px; border-radius: 4px; flex-wrap:wrap; background: rgba(150,150,150,0.1); border: 1px solid rgba(150,150,150,0.2); }
       .chart-full { grid-column: 1 / -1; }
@@ -192,13 +211,37 @@ export default {
 
       ${sys.custom_bg ? `
         body { background: url('${sys.custom_bg}') no-repeat center center fixed !important; background-size: cover !important; }
-        .vps-card, .global-stats, .header-card, .chart-card { background: rgba(255, 255, 255, 0.4) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border: 1px solid rgba(255, 255, 255, 0.6) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important; color: #111 !important; }
+        .vps-card, .global-stats, .header-card, .chart-card, .custom-table, .filter-tag, .view-controls { background: rgba(255, 255, 255, 0.4) !important; backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important; border: 1px solid rgba(255, 255, 255, 0.6) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1) !important; color: #111 !important; }
         .vps-card:hover { background: rgba(255, 255, 255, 0.6) !important; transform: translateY(-3px); }
         .group-header { color: #fff !important; text-shadow: 0 2px 5px rgba(0,0,0,0.6) !important; border-left-color: #fff !important; }
         .stat-val, .g-val, .card-title { color: #000 !important; font-weight: 800 !important; }
         .stat-label, .g-label, .g-sub, .card-meta { color: #333 !important; font-weight: 600 !important; }
         .stat-bar { background: rgba(0,0,0,0.1) !important; }
       ` : ''}
+
+      /* 视图切换按钮与表格基础样式 */
+      .view-controls { display: flex; gap: 8px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 8px; }
+      .toggle-btn { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border: none; background: transparent; cursor: pointer; border-radius: 6px; font-size: 13px; font-weight: 600; color: #64748b; transition: all 0.2s; }
+      .toggle-btn:hover { color: #0f172a; }
+      .toggle-btn.active { background: white; color: #3b82f6; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+      
+      .custom-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+      .custom-table th { background: #f8fafc; padding: 14px 16px; color: #64748b; font-weight: 600; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+      .custom-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+      .custom-table tr:hover { background: #f8fafc; }
+      .os-text { color: #64748b; font-size: 12px; }
+      .table-responsive { width: 100%; overflow-x: auto; }
+      
+      .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+      .filter-tag { display: inline-flex; align-items: center; gap: 5px; background: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #475569; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid transparent; }
+      .filter-tag.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+
+      #map-container { width: 100%; height: 500px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); overflow: hidden; border: 1px solid #e5e7eb; background: #e5e3df; z-index: 1;}
+      .custom-map-badge div { background-color: #10b981; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+
+      .view-panel { display: none; }
+      .view-panel.active { display: block; animation: fadeIn 0.3s ease; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     `;
 
     // ==========================================
@@ -880,7 +923,7 @@ echo "✅ 探针安装成功！"
       }
 
       // ----------------------------------------
-      // 大盘聚合卡片页
+      // 大盘聚合首页 (包含卡片、表格、地图功能)
       // ----------------------------------------
       const { results } = await env.DB.prepare('SELECT * FROM servers').all();
       const now = Date.now();
@@ -889,6 +932,7 @@ echo "✅ 探针安装成功！"
       let globalSpeedIn = 0; let globalSpeedOut = 0;
       let globalNetTx = 0; let globalNetRx = 0;
       const groups = {};
+      const countryStats = {}; // 用于统计国家数量
 
       const getColor = (ping) => { const p = parseInt(ping); if (p === 0 || isNaN(p)) return '#9ca3af'; if (p < 100) return '#10b981'; if (p < 200) return '#f59e0b'; return '#ef4444'; };
 
@@ -912,15 +956,32 @@ echo "✅ 探针安装成功！"
           const grpName = server.server_group || '默认分组';
           if (!groups[grpName]) groups[grpName] = [];
           groups[grpName].push(server);
+
+          // 统计国家节点数，用于顶部标签和地图点
+          let cCodeMap = (server.country || 'xx').toUpperCase();
+          if (cCodeMap === 'TW') cCodeMap = 'CN';
+          if (cCodeMap !== 'XX') {
+              countryStats[cCodeMap] = (countryStats[cCodeMap] || 0) + 1;
+          }
         }
       }
 
-      let contentHtml = '';
+      // 构建顶部国家筛选标签 HTML
+      let filterTagsHtml = `<span class="filter-tag active">全部 ${results.length}</span>`;
+      for (const [code, count] of Object.entries(countryStats)) {
+          filterTagsHtml += `<span class="filter-tag"><img src="https://flagcdn.com/16x12/${code.toLowerCase()}.png" alt="${code}"> ${code} ${count}</span>`;
+      }
+
+      // 构建卡片视图与表格视图 HTML 骨架
+      let cardContentHtml = '';
+      let tableBodyHtml = '';
+
       if (Object.keys(groups).length === 0) {
-        contentHtml = '<p style="text-align:center; width: 100%; color:#888;">暂无服务器，请在后台添加</p>';
+        cardContentHtml = '<p style="text-align:center; width: 100%; color:#888;">暂无服务器，请在后台添加</p>';
       } else {
         for (const [grpName, grpServers] of Object.entries(groups)) {
-          contentHtml += `<div class="group-header">${grpName}</div><div class="grid-container">`;
+          cardContentHtml += `<div class="group-header">${grpName}</div><div class="grid-container">`;
+          
           for (const server of grpServers) {
             const isOnline = (now - server.last_updated) < 30000;
             const statusColor = isOnline ? '#10b981' : '#ef4444'; 
@@ -931,6 +992,7 @@ echo "✅ 探针安装成功！"
             const cCode = (server.country || 'xx').toLowerCase();
             const flagHtml = cCode !== 'xx' ? `<img src="https://flagcdn.com/24x18/${cCode}.png" alt="${cCode}" style="vertical-align: sub; margin-right: 5px; border-radius: 2px;">` : '🏳️';
             
+            // --- 组装卡片视图 ---
             let metaHtml = '';
             if (sys.show_price === 'true') {
               metaHtml += `<div class="card-meta" style="margin-top:8px;">价格: ${server.price || '免费'}</div>`;
@@ -955,7 +1017,7 @@ echo "✅ 探针安装成功！"
 
             const pingHtml = `<div class="ping-box"><span>电信 <span style="color:${getColor(server.ping_ct)}; font-weight:bold;">${server.ping_ct === '0' ? '超时' : server.ping_ct + 'ms'}</span></span><span>联通 <span style="color:${getColor(server.ping_cu)}; font-weight:bold;">${server.ping_cu === '0' ? '超时' : server.ping_cu + 'ms'}</span></span><span>移动 <span style="color:${getColor(server.ping_cm)}; font-weight:bold;">${server.ping_cm === '0' ? '超时' : server.ping_cm + 'ms'}</span></span><span>字节 <span style="color:${getColor(server.ping_bd)}; font-weight:bold;">${server.ping_bd === '0' ? '超时' : server.ping_bd + 'ms'}</span></span></div>`;
 
-            contentHtml += `
+            cardContentHtml += `
               <a href="/?id=${server.id}" class="vps-card">
                 <div class="card-left">
                   <div class="card-title">
@@ -976,18 +1038,56 @@ echo "✅ 探针安装成功！"
                 </div>
               </a>
             `;
+
+            // --- 组装表格视图 ---
+            tableBodyHtml += `
+              <tr onclick="window.location.href='/?id=${server.id}'" style="cursor:pointer;">
+                <td style="text-align:center;"><div class="status-dot" style="background:${statusColor}; display:inline-block; margin:0;"></div></td>
+                <td><b>${server.name}</b></td>
+                <td>${flagHtml}</td>
+                <td><span class="os-text">${server.os || 'Linux'} / ${server.arch || 'KVM'}</span></td>
+                <td style="min-width:100px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="stat-bar" style="width:50px; margin:0;"><div style="width:${cpu}%;"></div></div>
+                    <span>${cpu}%</span>
+                  </div>
+                </td>
+                <td style="min-width:100px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="stat-bar" style="width:50px; margin:0;"><div style="width:${ram}%; background:#f59e0b;"></div></div>
+                    <span>${ram}%</span>
+                  </div>
+                </td>
+                <td style="min-width:100px;">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="stat-bar" style="width:50px; margin:0;"><div style="width:${disk}%; background:#10b981;"></div></div>
+                    <span>${disk}%</span>
+                  </div>
+                </td>
+                <td>${netInSpeed}/s</td>
+                <td>${netOutSpeed}/s</td>
+                <td style="color:#64748b; font-size:12px;">${Math.round((now - server.last_updated)/1000)} 秒前</td>
+              </tr>
+            `;
+
           }
-          contentHtml += `</div>`;
+          cardContentHtml += `</div>`;
         }
       }
 
+      // 大盘前台完整 HTML 输出
       const html = `<!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${sys.site_title}</title>
+        <!-- 引入 Leaflet 地图 CSS -->
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+        <!-- 移除之前的 meta refresh，改用下方 AJAX 无缝热更新机制，防止页面闪烁白屏 -->
+        <script id="map-data" type="application/json">${JSON.stringify(countryStats)}</script>
         <style>
+          /* 重新补回大盘首页的基础排版样式，修复了前面导致样式裸奔的问题 */
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f5f7; color: #333; margin: 0; padding: 20px; }
           .container { max-width: 1200px; margin: 0 auto; }
           .global-stats { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 30px; text-align: center; }
@@ -1008,7 +1108,6 @@ echo "✅ 探针安装成功！"
           .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; color: white; }
           .badge-bw { background: #3b82f6; } .badge-tf { background: #10b981; } .badge-v4 { background: #a855f7; } .badge-v6 { background: #ec4899; }
           .card-right { flex: 1; display: flex; justify-content: space-between; align-items: center; padding-left: 15px; border-left: 1px solid #f0f0f0; }
-          /* 修复文本过长导致换行的问题 */
           .stat-col { display: flex; flex-direction: column; align-items: center; flex: 1; padding: 0 2px; }
           .stat-label { font-size: 11px; color: #888; margin-bottom: 8px; white-space: nowrap; }
           .stat-val { font-size: 12px; font-weight: 600; color: #111; margin-bottom: 6px; white-space: nowrap; }
@@ -1016,25 +1115,182 @@ echo "✅ 探针安装成功！"
           .stat-bar > div { height: 100%; background: #3b82f6; border-radius: 2px; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
           .admin-btn { padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight:bold; }
-          @media (max-width: 600px) { .grid-container { grid-template-columns: 1fr; } .vps-card { flex-direction: column; } .card-right { padding-left: 0; border-left: none; border-top: 1px solid #f0f0f0; margin-top: 15px; padding-top: 15px; } }
+          @media (max-width: 800px) { .grid-container { grid-template-columns: 1fr; } .vps-card { flex-direction: column; } .card-right { padding-left: 0; border-left: none; border-top: 1px solid #f0f0f0; margin-top: 15px; padding-top: 15px; } .header { flex-direction: column; align-items: flex-start; gap: 15px;} .header-right { width:100%; justify-content: space-between;} }
+          
+          /* 将上述封装的全局主题、表格、地图样式注入 */
           ${themeStyles}
         </style>
-        <meta http-equiv="refresh" content="5">
       </head>
       <body class="${sys.theme || 'theme1'}">
-        <div class="container">
-          <div class="header">
+        <div class="container" id="app-container">
+          
+          <!-- 头部与视图切换按钮组 -->
+          <div class="header" style="flex-wrap: wrap; gap: 15px;">
             <h1 style="margin:0;">${sys.site_title}</h1>
-            <a href="/admin" class="admin-btn">${sys.admin_title}</a>
+            
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+              <div class="view-controls">
+                <button class="toggle-btn active" id="btn-card" onclick="switchView('card')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> 卡片
+                </button>
+                <button class="toggle-btn" id="btn-table" onclick="switchView('table')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg> 表格
+                </button>
+                <button class="toggle-btn" id="btn-map" onclick="switchView('map')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg> 地图
+                </button>
+              </div>
+              <a href="/admin" class="admin-btn">${sys.admin_title}</a>
+            </div>
           </div>
-          <div class="global-stats">
+
+          <!-- 顶部国家筛选条 -->
+          <div class="filter-bar" id="ajax-filters">
+            ${filterTagsHtml}
+          </div>
+
+          <!-- 全局统计区 -->
+          <div class="global-stats" id="ajax-stats">
             <div class="g-item"><div class="g-label">服务器总数</div><div class="g-val">${results.length}</div><div class="g-sub">在线 <span style="color:#10b981">${globalOnline}</span> | 离线 <span style="color:#ef4444">${globalOffline}</span></div></div>
             <div class="g-item"><div class="g-label">总计流量 (入 | 出) ${sys.auto_reset_traffic === 'true' ? '<span style="font-size:10px; color:#c2410c;">(本月)</span>' : ''}</div><div class="g-val">${formatBytes(globalNetRx)} | ${formatBytes(globalNetTx)}</div></div>
             <div class="g-item"><div class="g-label">实时网速 (入 | 出)</div><div class="g-val"><span style="color:#10b981">↓</span> ${formatBytes(globalSpeedIn)}/s | <span style="color:#3b82f6">↑</span> ${formatBytes(globalSpeedOut)}/s</div></div>
           </div>
-          ${contentHtml}
+
+          <!-- 视图容器 1: 卡片 (默认) -->
+          <div id="view-card" class="view-panel active">
+             <div id="ajax-cards">${cardContentHtml}</div>
+          </div>
+
+          <!-- 视图容器 2: 表格 -->
+          <div id="view-table" class="view-panel">
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr><th>状态</th><th>节点名称</th><th>地区</th><th>架构/系统</th><th>CPU</th><th>内存</th><th>磁盘</th><th>下行</th><th>上行</th><th>更新</th></tr>
+                </thead>
+                <tbody id="ajax-table">
+                  ${tableBodyHtml || '<tr><td colspan="10" style="text-align:center;">暂无数据</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 视图容器 3: 地图 -->
+          <div id="view-map" class="view-panel">
+            <div id="map-container"></div>
+          </div>
+          
           ${footerHtml}
         </div>
+
+        <!-- 引入 Leaflet JS -->
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+        
+        <script>
+          // =========================
+          // 1. 视图切换逻辑
+          // =========================
+          let mapInitialized = false;
+
+          function switchView(viewName) {
+            // 更新按钮高亮状态
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + viewName).classList.add('active');
+            
+            // 切换面板显示
+            document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById('view-' + viewName).classList.add('active');
+            
+            // 保存用户习惯到浏览器
+            localStorage.setItem('monitor_preferred_view', viewName);
+
+            // 如果切换到地图，初始化或重绘地图尺寸
+            if (viewName === 'map') {
+              if (!mapInitialized) {
+                initMap();
+                mapInitialized = true;
+              } else {
+                window.myMap.invalidateSize(); // 修复由于 display:none 导致地图加载灰块的问题
+              }
+            }
+          }
+
+          // =========================
+          // 2. 地图初始化与渲染逻辑
+          // =========================
+          let markersLayer;
+          // 全球核心国家/地区经纬度字典
+          const countryCoords = {
+            'US': [37.09, -95.71], 'CN': [35.86, 104.19], 'JP': [36.20, 138.25], 'HK': [22.31, 114.16],
+            'SG': [1.35, 103.81], 'KR': [35.90, 127.76], 'DE': [51.16, 10.45], 'GB': [55.37, -3.43],
+            'NL': [52.13, 5.29], 'FR': [46.22, 2.21], 'CA': [56.13, -106.34], 'AU': [-25.27, 133.77],
+            'IN': [20.59, 78.96], 'BR': [-14.23, -51.92], 'RU': [61.52, 105.31], 'ZA': [-30.55, 22.93]
+          };
+
+          function initMap() {
+            const isDark = document.body.className.includes('theme2') || document.body.className.includes('theme5');
+            // 判断当前主题加载不同的地图底图 (暗黑主题用深色瓦片地图)
+            const tileUrl = isDark 
+              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
+              : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+            window.myMap = L.map('map-container').setView([30, 10], 2);
+            L.tileLayer(tileUrl, { attribution: '© OpenStreetMap contributors', maxZoom: 10 }).addTo(window.myMap);
+            markersLayer = L.layerGroup().addTo(window.myMap);
+
+            drawMarkers();
+          }
+
+          function drawMarkers() {
+            if(!window.myMap) return;
+            markersLayer.clearLayers();
+            
+            try {
+              const data = JSON.parse(document.getElementById('map-data').textContent);
+              for (const [code, count] of Object.entries(data)) {
+                if(countryCoords[code]) {
+                  const icon = L.divIcon({ className: 'custom-map-badge', html: \`<div>\${count}</div>\`, iconSize: [26,26] });
+                  L.marker(countryCoords[code], {icon: icon}).addTo(markersLayer);
+                }
+              }
+            } catch(e) {}
+          }
+
+          // 网页加载时，读取 LocalStorage 自动恢复用户上次选择的视图
+          document.addEventListener('DOMContentLoaded', () => {
+             const savedView = localStorage.getItem('monitor_preferred_view') || 'card';
+             switchView(savedView);
+          });
+
+          // =========================
+          // 3. AJAX 无感局部热更新技术
+          // =========================
+          // 每 4 秒拉取一次最新页面，使用 DOM 替换方式刷新数据区，彻底告别粗暴的整页闪烁
+          setInterval(async () => {
+            try {
+              const res = await fetch(location.href);
+              const htmlText = await res.text();
+              
+              // 使用 DOMParser 解析后台传回的新 HTML
+              const parser = new DOMParser();
+              const newDoc = parser.parseFromString(htmlText, 'text/html');
+              
+              // 无缝替换几个核心数据区，不影响你的滚动条位置！
+              document.getElementById('ajax-stats').innerHTML = newDoc.getElementById('ajax-stats').innerHTML;
+              document.getElementById('ajax-cards').innerHTML = newDoc.getElementById('ajax-cards').innerHTML;
+              document.getElementById('ajax-table').innerHTML = newDoc.getElementById('ajax-table').innerHTML;
+              document.getElementById('ajax-filters').innerHTML = newDoc.getElementById('ajax-filters').innerHTML;
+              
+              // 更新地图底层数据并重绘徽章 Marker
+              document.getElementById('map-data').textContent = newDoc.getElementById('map-data').textContent;
+              drawMarkers();
+
+            } catch (e) {
+              console.log('Ajax Refresh Failed', e);
+            }
+          }, 4000);
+
+        </script>
       </body>
       </html>`;
 
