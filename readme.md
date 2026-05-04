@@ -53,7 +53,7 @@
 
     登录 Cloudflare 控制台，进入 Workers & Pages。
 
-    创建一个全新的 D1 数据库，命名为 monitor_db（或自定义名称）。
+    创建一个全新的 D1 数据库，命名为 probe-db
 
     创建一个新的 Worker 服务。
 
