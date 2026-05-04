@@ -36,7 +36,8 @@
 
 
 ### 2. 单节点实时性能折线图
-<img width="3989" height="1830" alt="image" src="https://github.com/user-attachments/assets/7eebc87c-a5aa-4620-a182-f4200fdaebca" />
+<img width="3971" height="1759" alt="image" src="https://github.com/user-attachments/assets/46567b0a-acf0-426e-b68a-58402aeff955" />
+<img width="3971" height="1759" alt="image" src="https://github.com/user-attachments/assets/668b1dec-f9bf-4b4b-b703-d1398671ed10" />
 
 
 ### 3. 后台管理与全局设置
