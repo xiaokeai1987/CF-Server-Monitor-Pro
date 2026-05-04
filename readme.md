@@ -11,6 +11,8 @@
 - **5 大精美主题一键切换**：内置默认清爽白、暗黑极客、新粗野主义、动态毛玻璃、赛博朋克 5 种完全不同的 UI 风格。
 - **自定义背景图与全透明模式**：支持在后台直接上传本地图片（自动转为 Base64）或填写图片 URL。开启背景图后，所有卡片自动化身为绝美的“半透明毛玻璃”质感。
 - **国旗智能匹配**：依托 Cloudflare 全球网络，自动识别 VPS 归属地并渲染超清图片国旗。
+- **无感 AJAX 热更新：彻底抛弃传统的 <meta refresh>，采用 DOM 局部替换技术，数据实时跳动，页面零闪烁。
+- **多维视图切换：内置 卡片 (Card)、表格 (Table) 和 世界地图 (Map) 三种视图，使用 LocalStorage 自动记忆用户偏好。
 
 ### 📊 专业级监控与大盘展示
 - **全局顶栏大盘**：直观展示服务器总数、在线/离线数、总计流量（入/出）以及全网实时网速。
@@ -46,35 +48,100 @@
 
 ---
 
-## 🛠️ 部署指南
+## 🚀 部署指南 (Deployment)
+第一步：配置 Cloudflare 环境
 
-### 第一步：创建 Cloudflare D1 数据库
-1. 登录 Cloudflare 控制台，进入 **Workers & Pages** -> **D1 SQL Database**。
-2. 创建一个名为 `probe-db` 的数据库。
-3. 数据库热创建与自动迁移,只需创建D1数据库即可
+    登录 Cloudflare 控制台，进入 Workers & Pages。
+
+    创建一个全新的 D1 数据库，命名为 monitor_db（或自定义名称）。
+
+    创建一个新的 Worker 服务。
+
+第二步：配置 Worker
+
+    将本项目中的 worker.js 代码全部复制并覆盖到你的 Worker 代码编辑器中。
+
+    在 Worker 的 设置 (Settings) -> 变量 (Variables) 中，绑定你刚才创建的 D1 数据库，变量名称必须为 DB。
+
+    在环境变量中添加一个密码变量，用于后台登录：
+
+        变量名：API_SECRET
+
+        值：设置你的高强度密码
+
+第三步：访问与初始化
+
+部署完成后，访问你的 Worker 域名。
+
+    管理后台路径：https://你的域名.workers.dev/admin
+
+    账号：admin
+
+    密码：你设置的 API_SECRET 的值
+    (注意：首次访问会自动初始化 D1 数据表，无需手动建表)
+
+💻 客户端探针安装 (Client Agent)
+
+进入管理后台后，点击 "+ 添加新服务器"。添加完成后，列表中会生成专属的一键安装命令。
+
+直接复制该命令，在你的目标 VPS 上（需 Root 权限）运行即可：
+Bash
+
+curl -sL [https://你的域名.workers.dev/install.sh](https://你的域名.workers.dev/install.sh) | bash -s <SERVER_ID> <API_SECRET>
+
+探针脚本会自动注册为 systemd 服务 (cf-probe.service)，并在后台静默运行，每 5 秒上报一次数据。
+
+🛠️ 高级自定义 (Advanced Injection)
+
+本项目为喜欢折腾的开发者预留了最高权限的魔改入口。进入后台 全局设置 -> 前端主题风格 -> 选择“6. 完全自定义 CSS”：
+
+    自定义 CSS：重写面板的所有样式，支持背景、卡片透明度、字体颜色等。
+
+    <head> 注入：你可以引入外部的 Google Fonts、TailwindCSS CDN 等。
+
+    Script 注入：编写原生 JavaScript 接管页面逻辑，比如增加动态粒子背景、甚至通过设置 body { display: none; } 隐藏原生页面，利用 AJAX 请求 /api/server?id=xxx 用你自己的前端框架重绘大盘。
+
+### 👑 【高级玩法揭秘】如何利用注入层彻底重构你的探针？
+
+既然你是能手搓量化框架和写各种环境脚手架的硬核选手，这些开放的注入区域就像给你提供了一个“跳板”。以下是三种高阶用法：
+
+#### 玩法 1：极简换肤（引入大厂 CSS 变量库）
+
+你可以在自定义 `<head>` 里注入 Bootstrap 或者你喜欢的 Google Fonts：
+
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code&display=swap" rel="stylesheet">
+<style>
+  /* 覆盖默认的字体库 */
+  body { font-family: 'Fira Code', monospace !important; }
+</style>
 ```
 
+#### 玩法 2：DOM 节点改造（通过 JS 拦截与重写）
 
-### 第二步：创建并配置 Cloudflare Worker
-1. 在 **Workers & Pages** 中创建一个新的 Worker。
-2. 进入该 Worker 的 **Settings (设置)** -> **Variables (变量与机密)**：
-   - **绑定 D1 数据库**：变量名填 `DB`，选择你刚才创建的 `probe-db`。
-   - **设置后台密码**：添加环境变量 `API_SECRET`，值为你自定义的管理后台登录密码（类型选择“文本”或“机密”均可）。
+不满意当前的 HTML 排版？直接在 **自定义底部 Script** 里面用原生 JS 或动态引入 jQuery，将页面按你的喜好重新拼装：
 
-### 第三步：部署代码
-1. 返回 Worker 的代码编辑页面（Edit Code）。
-2. 将本项目中的 `worker.js` 代码全部复制并覆盖进去。
-3. 点击 **Deploy (部署)**。
+```html
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(document).ready(function() {
+    // 比如：在所有的卡片右上角加一个炫酷的动态时钟
+    $('.card-title').append('<span class="my-clock" style="margin-left:auto; color:red;"></span>');
+    setInterval(() => { $('.my-clock').text(new Date().toLocaleTimeString()); }, 1000);
+  });
+</script>
+```
 
----
+#### 玩法 3：最高权限：纯无头模式 (Headless Framework)
 
-## 💻 使用说明
+这是最强大的用法。在后台的主题里写入一句 CSS 将官方容器干掉：
 
-1. **访问后台**：在浏览器访问 `https://你的Worker域名/admin`。
-2. **登录认证**：弹出的身份验证中，用户名为 `admin`，密码为你设置的 `API_SECRET` 的值。
-3. **添加节点**：在后台输入节点名称并添加，你可以点击“✏️ 编辑”来设置分组、价格、到期日等高阶信息。
-4. **安装探针**：点击绿色按钮“复制命令”，登录你的被控端 VPS 终端，粘贴并回车执行。
-5. **定制面板**：在后台最上方的“🛠️ 全局设置”中，你可以修改网站标题，并自由开关首页的各种元素显示。
+```css
+body.theme6 #app-container { display: none !important; }
+```
+
+然后，在 **自定义底部 Script** 里，引入 React/Vue 的 CDN，直接使用 `fetch('/api/server?id=xxx')`（或者你甚至可以通过 `SELECT * FROM servers` 的类似接口查出你的全量数据结构），在空白的 `<body>` 里用自己的组件库（例如 Ant Design、Element Plus）从零渲染一个 100% 独一无二的大盘监控。这样你的 Worker 就纯粹变成了一个后端的数据 API 中转站，而前端你可以随心所欲去开发。
 
   https://imgapi.cn/api.php?fl=dongman&=4k   api接口可实现背景图片自动轮换   
   
