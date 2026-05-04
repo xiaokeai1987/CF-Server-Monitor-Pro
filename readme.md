@@ -151,7 +151,7 @@ body.theme6 #app-container { display: none !important; }
 ```css
 /* 1. 网页全局二次元背景图 (换了一个保证能访问的超清动漫壁纸) */
 body.theme6 {
-  background: url('[https://imgapi.cn/api.php?fl=dongman&=4k](https://imgapi.cn/api.php?fl=dongman&=4k)') no-repeat center center fixed !important;
+  background: url('https://imgapi.cn/api.php?fl=dongman&=4k') no-repeat center center fixed !important;
   background-size: cover !important;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -184,7 +184,6 @@ body.theme6 {
 .theme6 .stat-label, .theme6 .g-label, .theme6 .card-meta { color: #555 !important; }
 .theme6 .stat-val, .theme6 .g-val, .theme6 .card-title-text { color: #000 !important; }
 .theme6 .group-header { color: #fff !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-
 ```
 
 ### ✨ 炫酷动态特效注入 (0 依赖纯原生)
