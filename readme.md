@@ -40,7 +40,7 @@
 
 
 ### 3. 后台管理与全局设置
-<img width="3984" height="1830" alt="image" src="https://github.com/user-attachments/assets/cd14d981-6ace-4d0c-97e8-534a177306ea" />
+<img width="3971" height="1759" alt="image" src="https://github.com/user-attachments/assets/f481c42c-215f-42a4-9183-dc7250628842" />
 
 
 ---
