@@ -6,13 +6,9 @@ export default {
     // ==========================================
     // 0. 数据库自动化热创建与无缝升级 (Auto Migration)
     // ==========================================
-    // 利用 globalThis 确保每个 Worker 实例生命周期内只检查一次，节省 D1 免费读取额度
     if (!globalThis.dbInitialized) {
       try {
-        // 1. 确保设置表存在
         await env.DB.prepare(`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`).run();
-        
-        // 2. 确保服务器表(基础结构)存在
         await env.DB.prepare(`
           CREATE TABLE IF NOT EXISTS servers (
             id TEXT PRIMARY KEY,
@@ -26,21 +22,17 @@ export default {
           )
         `).run();
 
-        // 3. 动态检测并追加新字段 (兼容老用户升级和新用户直接安装)
         const { results: columns } = await env.DB.prepare(`PRAGMA table_info(servers)`).all();
         const existingCols = columns.map(c => c.name);
         
-        // 需要确保存在的增强功能字段
         const newCols = {
           ping_ct: "TEXT DEFAULT '0'", ping_cu: "TEXT DEFAULT '0'", ping_cm: "TEXT DEFAULT '0'", ping_bd: "TEXT DEFAULT '0'",
           monthly_rx: "TEXT DEFAULT '0'", monthly_tx: "TEXT DEFAULT '0'", last_rx: "TEXT DEFAULT '0'", last_tx: "TEXT DEFAULT '0'", reset_month: "TEXT DEFAULT ''"
         };
 
-        // 遍历比对，缺少的自动 ALTER TABLE 追加
         for (const [colName, colDef] of Object.entries(newCols)) {
           if (!existingCols.includes(colName)) {
             await env.DB.prepare(`ALTER TABLE servers ADD COLUMN ${colName} ${colDef}`).run();
-            console.log(`✅ 自动追加字段: ${colName}`);
           }
         }
         
@@ -57,11 +49,6 @@ export default {
       const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
       const i = Math.floor(Math.log(b) / Math.log(k));
       return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
-
-    const getFlagEmoji = (countryCode) => {
-      if (!countryCode || countryCode === 'XX') return '🏳️';
-      return String.fromCodePoint(...countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt()));
     };
 
     // ==========================================
@@ -585,7 +572,10 @@ while true; do
   CPU_IDLE=\$(echo \$CPU_STAT | awk '{print \$2}')
   DIFF_TOTAL=\$((CPU_TOTAL - PREV_CPU_TOTAL))
   DIFF_IDLE=\$((CPU_IDLE - PREV_CPU_IDLE))
-  CPU=\$(awk -v t=\$DIFF_TOTAL -v i=\$DIFF_IDLE 'BEGIN {if (t==0) print 0; else printf "%.2f", (1 - i/t)*100}')
+  
+  # 修复 CPU 占用率为负数或超出的计算逻辑限制 
+  CPU=\$(awk -v t=\$DIFF_TOTAL -v i=\$DIFF_IDLE 'BEGIN {if (t<=0) print 0; else {pct=(1 - i/t)*100; if(pct<0) print 0; else if(pct>100) print 100; else printf "%.2f", pct}}')
+  
   PREV_CPU_TOTAL=\$CPU_TOTAL; PREV_CPU_IDLE=\$CPU_IDLE
   
   MEM_INFO=\$(free -m)
@@ -1018,9 +1008,10 @@ echo "✅ 探针安装成功！"
           .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; color: white; }
           .badge-bw { background: #3b82f6; } .badge-tf { background: #10b981; } .badge-v4 { background: #a855f7; } .badge-v6 { background: #ec4899; }
           .card-right { flex: 1; display: flex; justify-content: space-between; align-items: center; padding-left: 15px; border-left: 1px solid #f0f0f0; }
-          .stat-col { display: flex; flex-direction: column; align-items: center; width: 50px; }
-          .stat-label { font-size: 11px; color: #888; margin-bottom: 8px; }
-          .stat-val { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 6px; }
+          /* 修复文本过长导致换行的问题 */
+          .stat-col { display: flex; flex-direction: column; align-items: center; flex: 1; padding: 0 2px; }
+          .stat-label { font-size: 11px; color: #888; margin-bottom: 8px; white-space: nowrap; }
+          .stat-val { font-size: 12px; font-weight: 600; color: #111; margin-bottom: 6px; white-space: nowrap; }
           .stat-bar { width: 100%; height: 3px; background: #e5e7eb; border-radius: 2px; overflow: hidden; }
           .stat-bar > div { height: 100%; background: #3b82f6; border-radius: 2px; }
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
