@@ -74,6 +74,9 @@ export default {
       admin_title: '⚙️ 探针管理后台',
       theme: 'theme1', 
       custom_bg: '',
+      custom_css: '',
+      custom_head: '',   // 新增: Head注入
+      custom_script: '', // 新增: 底部JS注入
       is_public: 'true',
       show_price: 'true',
       show_expire: 'true',
@@ -145,7 +148,6 @@ export default {
       </div>
     `;
 
-    // 视图切换和表格相关样式增强
     const themeStyles = `
       body.theme2 { background-color: #0d1117; color: #c9d1d9; }
       .theme2 .vps-card, .theme2 .global-stats, .theme2 .header-card, .theme2 .chart-card { background: #161b22; color: #c9d1d9; box-shadow: 0 4px 6px rgba(0,0,0,0.4); border: 1px solid #30363d; }
@@ -156,7 +158,6 @@ export default {
       .theme2 .stat-bar { background: #21262d; }
       .theme2 .divider { background: #30363d; }
       .theme2 .card-title { color: #fff; }
-      /* 暗色模式下的表格与按钮 */
       .theme2 .view-controls { background: #0d1117; border: 1px solid #30363d; }
       .theme2 .toggle-btn { color: #8b949e; }
       .theme2 .toggle-btn:hover { color: #c9d1d9; }
@@ -205,6 +206,9 @@ export default {
       .theme5 .custom-table td { border-color: #333; }
       .theme5 .custom-table tr:hover { background: #222; }
 
+      /* 自定义主题注入区 */
+      ${sys.theme === 'theme6' ? (sys.custom_css || '') : ''}
+
       .ping-box { font-size:11px; margin-top:10px; display:flex; gap:10px; padding: 6px 8px; border-radius: 4px; flex-wrap:wrap; background: rgba(150,150,150,0.1); border: 1px solid rgba(150,150,150,0.2); }
       .chart-full { grid-column: 1 / -1; }
       .chart-full canvas { max-height: 250px !important; }
@@ -219,7 +223,6 @@ export default {
         .stat-bar { background: rgba(0,0,0,0.1) !important; }
       ` : ''}
 
-      /* 视图切换按钮与表格基础样式 */
       .view-controls { display: flex; gap: 8px; background: rgba(0,0,0,0.05); padding: 4px; border-radius: 8px; }
       .toggle-btn { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border: none; background: transparent; cursor: pointer; border-radius: 6px; font-size: 13px; font-weight: 600; color: #64748b; transition: all 0.2s; }
       .toggle-btn:hover { color: #0f172a; }
@@ -335,6 +338,7 @@ export default {
           .form-group { display: flex; flex-direction: column; margin-bottom: 15px; }
           .form-group label { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #555;}
           .form-group input[type="text"], .form-group select { padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+          .form-group textarea { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 12px; resize: vertical; line-height: 1.4; background: #fafafa;}
           .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 14px;}
           .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
           .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; }
@@ -345,28 +349,44 @@ export default {
       </head>
       <body>
         <div class="card">
-          <h2>🛠️ 全局设置</h2>
+          <h2>🛠️ 全局设置与高级自定义</h2>
           <div class="settings-grid">
             <div>
               <div class="form-group">
-                <label>🎨 前端主题风格 (5选1)</label>
-                <select id="cfg_theme">
+                <label>🎨 前端主题风格 (6选1)</label>
+                <select id="cfg_theme" onchange="toggleCustomCss()">
                   <option value="theme1" ${sys.theme === 'theme1' ? 'selected' : ''}>1. 默认清爽白 (Classic White)</option>
                   <option value="theme2" ${sys.theme === 'theme2' ? 'selected' : ''}>2. 暗黑极客 (Dark Mode)</option>
                   <option value="theme3" ${sys.theme === 'theme3' ? 'selected' : ''}>3. 新粗野主义 (Brutalism)</option>
                   <option value="theme4" ${sys.theme === 'theme4' ? 'selected' : ''}>4. 动态渐变毛玻璃 (Glassmorphism)</option>
                   <option value="theme5" ${sys.theme === 'theme5' ? 'selected' : ''}>5. 赛博朋克 (Cyberpunk)</option>
+                  <option value="theme6" ${sys.theme === 'theme6' ? 'selected' : ''}>6. 完全自定义 CSS (Custom Theme)</option>
                 </select>
               </div>
+
+              <div class="form-group" id="custom_css_group" style="display: ${sys.theme === 'theme6' ? 'flex' : 'none'};">
+                <label>🧑‍💻 自定义 CSS 代码</label>
+                <textarea id="cfg_custom_css" rows="5" placeholder="body.theme6 { background: #000; } ...">${sys.custom_css || ''}</textarea>
+              </div>
+
+              <!-- 全栈注入区 -->
               <div class="form-group">
-                <label>🖼️ 自定义背景图片 (上传或填URL，开启后强制全透明)</label>
+                <label>🧑‍💻 自定义 &lt;head&gt; 注入 (引入字体/外部CSS等)</label>
+                <textarea id="cfg_custom_head" rows="3" placeholder="&lt;link rel='stylesheet' href='...'&gt;">${sys.custom_head || ''}</textarea>
+              </div>
+              <div class="form-group">
+                <label>🧑‍💻 自定义底部 Script 注入 (可执行任意 JS, 接管页面渲染)</label>
+                <textarea id="cfg_custom_script" rows="4" placeholder="&lt;script&gt;console.log('Hello');&lt;/script&gt;">${sys.custom_script || ''}</textarea>
+              </div>
+
+              <div class="form-group">
+                <label>🖼️ 自定义背景图片 (上传或填URL)</label>
                 <div style="display:flex; gap:8px;">
                    <input type="text" id="cfg_custom_bg" value="${sys.custom_bg || ''}" placeholder="粘贴图片 URL 或 点击右侧按钮上传" style="flex:1;">
                    <input type="file" id="bg_file" accept="image/*" style="display:none;" onchange="uploadBg(this)">
                    <button class="btn btn-gray" onclick="document.getElementById('bg_file').click()">📁 本地上传</button>
                 </div>
                 <img id="bg_preview" src="${sys.custom_bg || ''}" style="max-height: 120px; margin-top: 10px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: ${sys.custom_bg ? 'block' : 'none'}; object-fit: cover;">
-                <span style="font-size:12px; color:#888; margin-top:5px;">* 上传的图片会自动转码保存，建议小于 500KB 以保证加载速度。清除输入框并保存即可恢复纯色主题。</span>
               </div>
               <div class="form-group">
                 <label>前台看板标题</label>
@@ -461,6 +481,11 @@ export default {
         ${footerHtml}
 
         <script>
+          function toggleCustomCss() {
+            const theme = document.getElementById('cfg_theme').value;
+            document.getElementById('custom_css_group').style.display = theme === 'theme6' ? 'flex' : 'none';
+          }
+
           function uploadBg(input) {
             const file = input.files[0];
             if(!file) return;
@@ -482,6 +507,9 @@ export default {
               settings: {
                 theme: document.getElementById('cfg_theme').value,
                 custom_bg: document.getElementById('cfg_custom_bg').value,
+                custom_css: document.getElementById('cfg_custom_css').value,
+                custom_head: document.getElementById('cfg_custom_head').value,
+                custom_script: document.getElementById('cfg_custom_script').value,
                 site_title: document.getElementById('cfg_site_title').value,
                 admin_title: document.getElementById('cfg_admin_title').value,
                 is_public: document.getElementById('cfg_is_public').checked ? 'true' : 'false',
@@ -616,7 +644,6 @@ while true; do
   DIFF_TOTAL=\$((CPU_TOTAL - PREV_CPU_TOTAL))
   DIFF_IDLE=\$((CPU_IDLE - PREV_CPU_IDLE))
   
-  # 修复 CPU 占用率为负数或超出的计算逻辑限制 
   CPU=\$(awk -v t=\$DIFF_TOTAL -v i=\$DIFF_IDLE 'BEGIN {if (t<=0) print 0; else {pct=(1 - i/t)*100; if(pct<0) print 0; else if(pct>100) print 100; else printf "%.2f", pct}}')
   
   PREV_CPU_TOTAL=\$CPU_TOTAL; PREV_CPU_IDLE=\$CPU_IDLE
@@ -686,7 +713,7 @@ echo "✅ 探针安装成功！"
     }
 
     // ==========================================
-    // API 接收数据 (/update) (核心流量累加与重置逻辑)
+    // API 接收数据 (/update)
     // ==========================================
     if (request.method === 'POST' && url.pathname === '/update') {
       try {
@@ -805,6 +832,7 @@ echo "✅ 探针安装成功！"
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>${server.name} - ${sys.site_title}</title>
           <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          ${sys.custom_head || ''}
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f9fafb; color: #333; margin: 0; padding: 20px; }
             .container { max-width: 1200px; margin: 0 auto; }
@@ -917,6 +945,7 @@ echo "✅ 探针安装成功！"
             }
             setInterval(fetchData, 3000); fetchData();
           </script>
+          ${sys.custom_script || ''}
         </body>
         </html>`;
         return new Response(detailHtml, { headers: { 'Content-Type': 'text/html;charset=UTF-8' } });
@@ -957,7 +986,6 @@ echo "✅ 探针安装成功！"
           if (!groups[grpName]) groups[grpName] = [];
           groups[grpName].push(server);
 
-          // 统计国家节点数，用于顶部标签和地图点
           let cCodeMap = (server.country || 'xx').toUpperCase();
           if (cCodeMap === 'TW') cCodeMap = 'CN';
           if (cCodeMap !== 'XX') {
@@ -966,13 +994,11 @@ echo "✅ 探针安装成功！"
         }
       }
 
-      // 构建顶部国家筛选标签 HTML
       let filterTagsHtml = `<span class="filter-tag active">全部 ${results.length}</span>`;
       for (const [code, count] of Object.entries(countryStats)) {
           filterTagsHtml += `<span class="filter-tag"><img src="https://flagcdn.com/16x12/${code.toLowerCase()}.png" alt="${code}"> ${code} ${count}</span>`;
       }
 
-      // 构建卡片视图与表格视图 HTML 骨架
       let cardContentHtml = '';
       let tableBodyHtml = '';
 
@@ -992,7 +1018,6 @@ echo "✅ 探针安装成功！"
             const cCode = (server.country || 'xx').toLowerCase();
             const flagHtml = cCode !== 'xx' ? `<img src="https://flagcdn.com/24x18/${cCode}.png" alt="${cCode}" style="vertical-align: sub; margin-right: 5px; border-radius: 2px;">` : '🏳️';
             
-            // --- 组装卡片视图 ---
             let metaHtml = '';
             if (sys.show_price === 'true') {
               metaHtml += `<div class="card-meta" style="margin-top:8px;">价格: ${server.price || '免费'}</div>`;
@@ -1039,7 +1064,6 @@ echo "✅ 探针安装成功！"
               </a>
             `;
 
-            // --- 组装表格视图 ---
             tableBodyHtml += `
               <tr onclick="window.location.href='/?id=${server.id}'" style="cursor:pointer;">
                 <td style="text-align:center;"><div class="status-dot" style="background:${statusColor}; display:inline-block; margin:0;"></div></td>
@@ -1075,19 +1099,19 @@ echo "✅ 探针安装成功！"
         }
       }
 
-      // 大盘前台完整 HTML 输出
       const html = `<!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${sys.site_title}</title>
-        <!-- 引入 Leaflet 地图 CSS -->
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-        <!-- 移除之前的 meta refresh，改用下方 AJAX 无缝热更新机制，防止页面闪烁白屏 -->
         <script id="map-data" type="application/json">${JSON.stringify(countryStats)}</script>
+        
+        <!-- 用户自定义 <head> 注入区 (引入外部 CSS/Font 等) -->
+        ${sys.custom_head || ''}
+
         <style>
-          /* 重新补回大盘首页的基础排版样式，修复了前面导致样式裸奔的问题 */
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f5f7; color: #333; margin: 0; padding: 20px; }
           .container { max-width: 1200px; margin: 0 auto; }
           .global-stats { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 30px; text-align: center; }
@@ -1097,6 +1121,7 @@ echo "✅ 探针安装成功！"
           .g-sub { font-size: 12px; color: #999; }
           .group-header { font-size: 18px; font-weight: 600; color: #444; margin: 25px 0 15px 5px; border-left: 4px solid #3b82f6; padding-left: 10px; }
           .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 15px; }
+          
           .vps-card { display: flex; justify-content: space-between; align-items: stretch; background: white; padding: 18px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); text-decoration: none; color: inherit; border: 1px solid transparent; transition: all 0.2s ease; }
           .vps-card:hover { border-color: #e5e7eb; transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
           .card-left { flex: 0 0 180px; display: flex; flex-direction: column; justify-content: center; }
@@ -1107,24 +1132,24 @@ echo "✅ 探针安装成功！"
           .card-badges { margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
           .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; color: white; }
           .badge-bw { background: #3b82f6; } .badge-tf { background: #10b981; } .badge-v4 { background: #a855f7; } .badge-v6 { background: #ec4899; }
+          
           .card-right { flex: 1; display: flex; justify-content: space-between; align-items: center; padding-left: 15px; border-left: 1px solid #f0f0f0; }
           .stat-col { display: flex; flex-direction: column; align-items: center; flex: 1; padding: 0 2px; }
           .stat-label { font-size: 11px; color: #888; margin-bottom: 8px; white-space: nowrap; }
           .stat-val { font-size: 12px; font-weight: 600; color: #111; margin-bottom: 6px; white-space: nowrap; }
           .stat-bar { width: 100%; height: 3px; background: #e5e7eb; border-radius: 2px; overflow: hidden; }
-          .stat-bar > div { height: 100%; background: #3b82f6; border-radius: 2px; }
+          .stat-bar > div { height: 100%; background: #3b82f6; border-radius: 2px; transition: width 0.3s; }
+          
           .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
           .admin-btn { padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight:bold; }
           @media (max-width: 800px) { .grid-container { grid-template-columns: 1fr; } .vps-card { flex-direction: column; } .card-right { padding-left: 0; border-left: none; border-top: 1px solid #f0f0f0; margin-top: 15px; padding-top: 15px; } .header { flex-direction: column; align-items: flex-start; gap: 15px;} .header-right { width:100%; justify-content: space-between;} }
           
-          /* 将上述封装的全局主题、表格、地图样式注入 */
           ${themeStyles}
         </style>
       </head>
       <body class="${sys.theme || 'theme1'}">
         <div class="container" id="app-container">
           
-          <!-- 头部与视图切换按钮组 -->
           <div class="header" style="flex-wrap: wrap; gap: 15px;">
             <h1 style="margin:0;">${sys.site_title}</h1>
             
@@ -1144,24 +1169,20 @@ echo "✅ 探针安装成功！"
             </div>
           </div>
 
-          <!-- 顶部国家筛选条 -->
           <div class="filter-bar" id="ajax-filters">
             ${filterTagsHtml}
           </div>
 
-          <!-- 全局统计区 -->
           <div class="global-stats" id="ajax-stats">
             <div class="g-item"><div class="g-label">服务器总数</div><div class="g-val">${results.length}</div><div class="g-sub">在线 <span style="color:#10b981">${globalOnline}</span> | 离线 <span style="color:#ef4444">${globalOffline}</span></div></div>
             <div class="g-item"><div class="g-label">总计流量 (入 | 出) ${sys.auto_reset_traffic === 'true' ? '<span style="font-size:10px; color:#c2410c;">(本月)</span>' : ''}</div><div class="g-val">${formatBytes(globalNetRx)} | ${formatBytes(globalNetTx)}</div></div>
             <div class="g-item"><div class="g-label">实时网速 (入 | 出)</div><div class="g-val"><span style="color:#10b981">↓</span> ${formatBytes(globalSpeedIn)}/s | <span style="color:#3b82f6">↑</span> ${formatBytes(globalSpeedOut)}/s</div></div>
           </div>
 
-          <!-- 视图容器 1: 卡片 (默认) -->
           <div id="view-card" class="view-panel active">
              <div id="ajax-cards">${cardContentHtml}</div>
           </div>
 
-          <!-- 视图容器 2: 表格 -->
           <div id="view-table" class="view-panel">
             <div class="table-responsive">
               <table class="custom-table">
@@ -1175,7 +1196,6 @@ echo "✅ 探针安装成功！"
             </div>
           </div>
 
-          <!-- 视图容器 3: 地图 -->
           <div id="view-map" class="view-panel">
             <div id="map-container"></div>
           </div>
@@ -1183,43 +1203,30 @@ echo "✅ 探针安装成功！"
           ${footerHtml}
         </div>
 
-        <!-- 引入 Leaflet JS -->
         <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-        
         <script>
-          // =========================
-          // 1. 视图切换逻辑
-          // =========================
           let mapInitialized = false;
 
           function switchView(viewName) {
-            // 更新按钮高亮状态
             document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('btn-' + viewName).classList.add('active');
             
-            // 切换面板显示
             document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
             document.getElementById('view-' + viewName).classList.add('active');
             
-            // 保存用户习惯到浏览器
             localStorage.setItem('monitor_preferred_view', viewName);
 
-            // 如果切换到地图，初始化或重绘地图尺寸
             if (viewName === 'map') {
               if (!mapInitialized) {
                 initMap();
                 mapInitialized = true;
               } else {
-                window.myMap.invalidateSize(); // 修复由于 display:none 导致地图加载灰块的问题
+                window.myMap.invalidateSize(); 
               }
             }
           }
 
-          // =========================
-          // 2. 地图初始化与渲染逻辑
-          // =========================
           let markersLayer;
-          // 全球核心国家/地区经纬度字典
           const countryCoords = {
             'US': [37.09, -95.71], 'CN': [35.86, 104.19], 'JP': [36.20, 138.25], 'HK': [22.31, 114.16],
             'SG': [1.35, 103.81], 'KR': [35.90, 127.76], 'DE': [51.16, 10.45], 'GB': [55.37, -3.43],
@@ -1229,7 +1236,6 @@ echo "✅ 探针安装成功！"
 
           function initMap() {
             const isDark = document.body.className.includes('theme2') || document.body.className.includes('theme5');
-            // 判断当前主题加载不同的地图底图 (暗黑主题用深色瓦片地图)
             const tileUrl = isDark 
               ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
               : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
@@ -1256,41 +1262,33 @@ echo "✅ 探针安装成功！"
             } catch(e) {}
           }
 
-          // 网页加载时，读取 LocalStorage 自动恢复用户上次选择的视图
           document.addEventListener('DOMContentLoaded', () => {
              const savedView = localStorage.getItem('monitor_preferred_view') || 'card';
              switchView(savedView);
           });
 
-          // =========================
-          // 3. AJAX 无感局部热更新技术
-          // =========================
-          // 每 4 秒拉取一次最新页面，使用 DOM 替换方式刷新数据区，彻底告别粗暴的整页闪烁
           setInterval(async () => {
             try {
               const res = await fetch(location.href);
               const htmlText = await res.text();
-              
-              // 使用 DOMParser 解析后台传回的新 HTML
               const parser = new DOMParser();
               const newDoc = parser.parseFromString(htmlText, 'text/html');
               
-              // 无缝替换几个核心数据区，不影响你的滚动条位置！
               document.getElementById('ajax-stats').innerHTML = newDoc.getElementById('ajax-stats').innerHTML;
               document.getElementById('ajax-cards').innerHTML = newDoc.getElementById('ajax-cards').innerHTML;
               document.getElementById('ajax-table').innerHTML = newDoc.getElementById('ajax-table').innerHTML;
               document.getElementById('ajax-filters').innerHTML = newDoc.getElementById('ajax-filters').innerHTML;
               
-              // 更新地图底层数据并重绘徽章 Marker
               document.getElementById('map-data').textContent = newDoc.getElementById('map-data').textContent;
               drawMarkers();
-
             } catch (e) {
               console.log('Ajax Refresh Failed', e);
             }
           }, 4000);
-
         </script>
+        
+        <!-- 用户自定义 <body> 底部注入区 (运行自定义JS) -->
+        ${sys.custom_script || ''}
       </body>
       </html>`;
 
