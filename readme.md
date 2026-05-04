@@ -143,6 +143,79 @@ body.theme6 #app-container { display: none !important; }
 
 然后，在 **自定义底部 Script** 里，引入 React/Vue 的 CDN，直接使用 `fetch('/api/server?id=xxx')`（或者你甚至可以通过 `SELECT * FROM servers` 的类似接口查出你的全量数据结构），在空白的 `<body>` 里用自己的组件库（例如 Ant Design、Element Plus）从零渲染一个 100% 独一无二的大盘监控。这样你的 Worker 就纯粹变成了一个后端的数据 API 中转站，而前端你可以随心所欲去开发。
 
+### ✨ 炫酷动态特效注入 (0 依赖纯原生)
+
+如果你喜欢二次元或更加生动的展示界面，可以将以下代码完全复制，并粘贴到管理后台的 **「自定义底部 Script 注入」** 输入框中。
+
+这段脚本包含了三种精美的特效，**全部由纯原生 JavaScript 和 Canvas 物理引擎手搓而成，不依赖 jQuery，不需要加载任何外部图片或库，极速渲染且永久有效！**
+
+*   🌸 **樱花飘落**：使用纯数学贝塞尔曲线动态绘制花瓣。
+*   ✨ **星光拖尾**：随鼠标移动生成的炫彩粒子跟随拖尾。
+*   ❤️ **爱心浮动**：鼠标点击页面任意位置，生成随机颜色的爱心并上浮。
+```html
+<!-- =========================================================
+     全套原生纯 JS 特效 (樱花 + 鼠标星光拖尾 + 鼠标点击爱心)
+     0 外部依赖，0 图片加载，极速渲染，永久生效！
+========================================================== -->
+<script>
+// 1. 🌸 纯原生 Canvas 樱花飘落特效 (纯数学贝塞尔曲线绘制花瓣)
+!function(){
+  var canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:fixed;top:0;left:0;pointer-events:none;z-index:9999997";
+  document.body.appendChild(canvas);
+  var ctx = canvas.getContext("2d"), w = window.innerWidth, h = window.innerHeight;
+  canvas.width = w; canvas.height = h;
+  window.addEventListener("resize", function(){ w=window.innerWidth; h=window.innerHeight; canvas.width=w; canvas.height=h; });
+  var petals = [];
+  for(var i=0; i<40; i++) petals.push({ x: Math.random()*w, y: Math.random()*h, vx: Math.random()*0.5+0.5, vy: Math.random()*1+1, angle: Math.random()*Math.PI*2, spin: Math.random()*0.05-0.025, size: Math.random()*4+5 });
+  function render(){
+    ctx.clearRect(0,0,w,h);
+    for(var i=0; i<petals.length; i++){
+      var p = petals[i];
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+      ctx.beginPath(); ctx.moveTo(0, -p.size);
+      ctx.bezierCurveTo(p.size, -p.size, p.size, p.size, 0, p.size);
+      ctx.bezierCurveTo(-p.size, p.size, -p.size, -p.size, 0, -p.size);
+      ctx.fillStyle = "rgba(255, 183, 197, 0.7)"; ctx.fill(); ctx.restore();
+      p.x += p.vx; p.y += p.vy; p.angle += p.spin;
+      if(p.y > h || p.x > w) { p.y = -20; p.x = Math.random()*w; }
+    }
+    requestAnimationFrame(render);
+  }
+  render();
+}();
+
+// 2. ✨ 纯原生 Canvas 鼠标烟花/星光拖尾特效
+!function(){
+  var canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:fixed;top:0;left:0;pointer-events:none;z-index:9999998";
+  document.body.appendChild(canvas);
+  var ctx = canvas.getContext("2d"), w = window.innerWidth, h = window.innerHeight;
+  canvas.width = w; canvas.height = h;
+  window.addEventListener("resize", function(){ w=window.innerWidth; h=window.innerHeight; canvas.width=w; canvas.height=h; });
+  var particles = [], mouse = {x: -100, y: -100};
+  window.addEventListener("mousemove", function(e){ 
+    mouse.x=e.clientX; mouse.y=e.clientY; 
+    particles.push({x:mouse.x, y:mouse.y, vx:Math.random()*2-1, vy:Math.random()*2-1, size:Math.random()*3+1.5, color:"hsl("+(Math.random()*360)+", 100%, 75%)"}); 
+  });
+  function render(){
+    ctx.clearRect(0,0,w,h);
+    for(var i=0; i<particles.length; i++){
+      var p = particles[i];
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fillStyle=p.color; ctx.fill();
+      p.x += p.vx; p.y += p.vy; p.size *= 0.92;
+    }
+    particles = particles.filter(function(p){ return p.size > 0.5; });
+    requestAnimationFrame(render);
+  }
+  render();
+}();
+
+// 3. ❤️ 纯原生 DOM 鼠标点击爱心上浮特效
+!function(e,t,a){function n(){c(".heart{width: 10px;height: 10px;position: fixed;background: #f00;transform: rotate(45deg);-webkit-transform: rotate(45deg);-moz-transform: rotate(45deg);}.heart:after,.heart:before{content: '';width: inherit;height: inherit;background: inherit;border-radius: 50%;-webkit-border-radius: 50%;-moz-border-radius: 50%;position: fixed;}.heart:after{top: -5px;}.heart:before{left: -5px;}"),o(),r()}function r(){for(var e=0;e<d.length;e++)d[e].alpha<=0?(t.body.removeChild(d[e].el),d.splice(e,1)):(d[e].y--,d[e].scale+=.004,d[e].alpha-=.013,d[e].el.style.cssText="left:"+d[e].x+"px;top:"+d[e].y+"px;opacity:"+d[e].alpha+";transform:scale("+d[e].scale+","+d[e].scale+") rotate(45deg);background:"+d[e].color+";z-index:9999999");requestAnimationFrame(r)}function o(){var t="function"==typeof e.onclick&&e.onclick;e.onclick=function(e){t&&t(),i(e)}}function i(e){var a=t.createElement("div");a.className="heart",d.push({el:a,x:e.clientX-5,y:e.clientY-5,scale:1,alpha:1,color:s()}),t.body.appendChild(a)}function c(e){var a=t.createElement("style");a.type="text/css";try{a.appendChild(t.createTextNode(e))}catch(t){a.styleSheet.cssText=e}t.getElementsByTagName("head")[0].appendChild(a)}function s(){return"rgb("+~~(255*Math.random())+","+~~(255*Math.random())+","+~~(255*Math.random())+")"}var d=[];e.requestAnimationFrame=function(){return e.requestAnimationFrame||e.webkitRequestAnimationFrame||e.mozRequestAnimationFrame||e.oRequestAnimationFrame||e.msRequestAnimationFrame||function(e){setTimeout(e,1e3/60)}}(),n()}(window,document);
+</script>
+```
+
   https://imgapi.cn/api.php?fl=dongman&=4k   api接口可实现背景图片自动轮换   
   
 
