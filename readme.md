@@ -1,3 +1,7 @@
+## 🤝 参与贡献 (Contributing)
+
+如果你喜欢这个项目，欢迎提交 Pull Request，或者给个 ⭐ **Star** 支持一下！
+
 # ⚡ CF-Server-Monitor-Pro (Serverless 探针增强版)
 
 10台VPS以下可以使用cf版本轻量部署，10台VPS以上建议使用docker部署在免费容器northflank https://github.com/a63414262/server-monitor
